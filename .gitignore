@@ -34,3 +34,10 @@ uploads/*
 # Build artifacts
 dist/
 build/
+electron-app/dist/
+electron-app/node_modules/
+
+# Large download files (upload manually to server)
+public/downloads/*.dmg
+public/downloads/*.exe
+*.blockmap
