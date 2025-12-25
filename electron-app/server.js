@@ -5,7 +5,12 @@
 
 const express = require('express');
 const cors = require('cors');
-const scanner = require('./fingerprint');
+const os = require('os');
+
+// Use Windows-specific module on Windows, generic on other platforms
+const scanner = os.platform() === 'win32'
+  ? require('./fingerprint-windows')
+  : require('./fingerprint');
 
 let server = null;
 const PORT = 5050;

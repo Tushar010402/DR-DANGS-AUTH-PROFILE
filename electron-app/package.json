@@ -83,8 +83,10 @@
       "preload.js",
       "server.js",
       "fingerprint.js",
+      "fingerprint-windows.js",
       "index.html",
       "assets/**/*",
+      "sdk/**/*",
       "!node_modules/**/*.md",
       "!node_modules/**/*.txt"
     ],

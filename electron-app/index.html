@@ -1,152 +1,741 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dr. Dangs Fingerprint Service</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dr. Dangs Fingerprint Service</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
 
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
-            color: #f8fafc;
-            height: 100vh;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            -webkit-app-region: drag;
-            user-select: none;
-        }
+    :root {
+      --primary: #2563eb;
+      --primary-dark: #1d4ed8;
+      --primary-light: #3b82f6;
+      --success: #10b981;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+      --gray-50: #f9fafb;
+      --gray-100: #f3f4f6;
+      --gray-200: #e5e7eb;
+      --gray-300: #d1d5db;
+      --gray-400: #9ca3af;
+      --gray-500: #6b7280;
+      --gray-600: #4b5563;
+      --gray-700: #374151;
+      --gray-800: #1f2937;
+      --gray-900: #111827;
+      --shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06);
+      --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05);
+    }
 
-        .container {
-            text-align: center;
-            padding: 30px;
-            -webkit-app-region: no-drag;
-        }
+    body {
+      font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
 
-        .icon {
-            width: 80px;
-            height: 80px;
-            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-            border-radius: 20px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin: 0 auto 20px;
-            box-shadow: 0 10px 30px rgba(59, 130, 246, 0.3);
-        }
+    .container {
+      width: 100%;
+      max-width: 480px;
+    }
 
-        .icon svg {
-            width: 45px;
-            height: 45px;
-            color: white;
-        }
+    .card {
+      background: white;
+      border-radius: 24px;
+      box-shadow: var(--shadow-lg);
+      overflow: hidden;
+    }
 
-        h1 {
-            font-size: 1.3rem;
-            font-weight: 600;
-            margin-bottom: 8px;
-        }
+    .header {
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+      padding: 24px;
+      text-align: center;
+      color: white;
+    }
 
-        .status {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            color: #10b981;
-            font-size: 0.95rem;
-            margin-bottom: 25px;
-        }
+    .logo {
+      width: 64px;
+      height: 64px;
+      background: rgba(255,255,255,0.2);
+      border-radius: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 16px;
+      font-size: 32px;
+    }
 
-        .status-dot {
-            width: 10px;
-            height: 10px;
-            background: #10b981;
-            border-radius: 50%;
-            animation: pulse 2s infinite;
-        }
+    .header h1 {
+      font-size: 1.5rem;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
 
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
-        }
+    .header p {
+      font-size: 0.875rem;
+      opacity: 0.9;
+    }
 
-        .info {
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 12px;
-            padding: 15px 20px;
-            margin-bottom: 20px;
-            font-size: 0.85rem;
-            color: #94a3b8;
-        }
+    .content {
+      padding: 24px;
+    }
 
-        .info strong {
-            color: #f8fafc;
-        }
+    .status-card {
+      background: var(--gray-50);
+      border-radius: 16px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
 
-        .btn {
-            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-            color: white;
-            border: none;
-            padding: 12px 24px;
-            border-radius: 10px;
-            font-size: 0.95rem;
-            font-weight: 500;
-            cursor: pointer;
-            transition: transform 0.2s, box-shadow 0.2s;
-        }
+    .status-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+    }
 
-        .btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 20px rgba(59, 130, 246, 0.4);
-        }
+    .status-title {
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: var(--gray-600);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
 
-        .footer {
-            position: absolute;
-            bottom: 15px;
-            font-size: 0.75rem;
-            color: #64748b;
-        }
-    </style>
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+
+    .status-badge.connected {
+      background: #d1fae5;
+      color: #065f46;
+    }
+
+    .status-badge.disconnected {
+      background: #fee2e2;
+      color: #991b1b;
+    }
+
+    .status-badge.capturing {
+      background: #fef3c7;
+      color: #92400e;
+      animation: pulse 1.5s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.6; }
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: currentColor;
+    }
+
+    .device-info {
+      display: grid;
+      gap: 12px;
+    }
+
+    .info-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 0;
+      border-bottom: 1px solid var(--gray-200);
+    }
+
+    .info-row:last-child {
+      border-bottom: none;
+    }
+
+    .info-label {
+      font-size: 0.875rem;
+      color: var(--gray-500);
+    }
+
+    .info-value {
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: var(--gray-800);
+    }
+
+    .fingerprint-area {
+      background: var(--gray-100);
+      border: 3px dashed var(--gray-300);
+      border-radius: 20px;
+      padding: 40px;
+      text-align: center;
+      margin-bottom: 20px;
+      transition: all 0.3s ease;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .fingerprint-area.active {
+      border-color: var(--primary);
+      background: #eff6ff;
+    }
+
+    .fingerprint-area.success {
+      border-color: var(--success);
+      background: #ecfdf5;
+    }
+
+    .fingerprint-icon {
+      width: 80px;
+      height: 80px;
+      margin: 0 auto 16px;
+      position: relative;
+    }
+
+    .fingerprint-icon svg {
+      width: 100%;
+      height: 100%;
+      color: var(--gray-400);
+      transition: all 0.3s ease;
+    }
+
+    .fingerprint-area.active .fingerprint-icon svg {
+      color: var(--primary);
+      animation: scan 1.5s infinite;
+    }
+
+    .fingerprint-area.success .fingerprint-icon svg {
+      color: var(--success);
+    }
+
+    @keyframes scan {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.1); }
+    }
+
+    .fingerprint-text {
+      font-size: 1rem;
+      font-weight: 500;
+      color: var(--gray-600);
+      margin-bottom: 4px;
+    }
+
+    .fingerprint-subtext {
+      font-size: 0.875rem;
+      color: var(--gray-400);
+    }
+
+    .fingerprint-image {
+      width: 150px;
+      height: 175px;
+      margin: 0 auto 16px;
+      background: var(--gray-200);
+      border-radius: 12px;
+      overflow: hidden;
+      display: none;
+      border: 2px solid var(--success);
+    }
+
+    .fingerprint-image canvas {
+      width: 100%;
+      height: 100%;
+    }
+
+    .fingerprint-area.success .fingerprint-image {
+      display: block;
+    }
+
+    .fingerprint-area.success .fingerprint-icon {
+      display: none;
+    }
+
+    .quality-bar {
+      margin-top: 16px;
+      display: none;
+    }
+
+    .fingerprint-area.success .quality-bar {
+      display: block;
+    }
+
+    .quality-label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.75rem;
+      color: var(--gray-500);
+      margin-bottom: 6px;
+    }
+
+    .quality-track {
+      height: 8px;
+      background: var(--gray-200);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+
+    .quality-fill {
+      height: 100%;
+      background: var(--success);
+      border-radius: 4px;
+      transition: width 0.5s ease;
+    }
+
+    .actions {
+      display: grid;
+      gap: 12px;
+    }
+
+    .btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 14px 24px;
+      border: none;
+      border-radius: 12px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+      color: white;
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(37, 99, 235, 0.4);
+    }
+
+    .btn-secondary {
+      background: var(--gray-100);
+      color: var(--gray-700);
+    }
+
+    .btn-secondary:hover:not(:disabled) {
+      background: var(--gray-200);
+    }
+
+    .btn-success {
+      background: linear-gradient(135deg, var(--success) 0%, #059669 100%);
+      color: white;
+    }
+
+    .btn-success:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+    }
+
+    .footer {
+      padding: 16px 24px;
+      background: var(--gray-50);
+      border-top: 1px solid var(--gray-200);
+      text-align: center;
+    }
+
+    .footer-text {
+      font-size: 0.75rem;
+      color: var(--gray-500);
+    }
+
+    .service-info {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+
+    .service-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--success);
+      animation: pulse 2s infinite;
+    }
+
+    .service-text {
+      font-size: 0.75rem;
+      color: var(--gray-600);
+    }
+
+    /* Toast notifications */
+    .toast-container {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      z-index: 1000;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .toast {
+      background: white;
+      padding: 16px 20px;
+      border-radius: 12px;
+      box-shadow: var(--shadow-lg);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      animation: slideIn 0.3s ease;
+      max-width: 320px;
+    }
+
+    @keyframes slideIn {
+      from { transform: translateX(100%); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+
+    .toast.success { border-left: 4px solid var(--success); }
+    .toast.error { border-left: 4px solid var(--danger); }
+    .toast.warning { border-left: 4px solid var(--warning); }
+
+    .toast-icon {
+      width: 24px;
+      height: 24px;
+      flex-shrink: 0;
+    }
+
+    .toast-message {
+      font-size: 0.875rem;
+      color: var(--gray-700);
+    }
+
+    /* Spinner */
+    .spinner {
+      width: 20px;
+      height: 20px;
+      border: 3px solid rgba(255,255,255,0.3);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* Responsive */
+    @media (max-width: 480px) {
+      body {
+        padding: 10px;
+      }
+
+      .card {
+        border-radius: 20px;
+      }
+
+      .header {
+        padding: 20px;
+      }
+
+      .content {
+        padding: 20px;
+      }
+    }
+  </style>
 </head>
 <body>
-    <div class="container">
-        <div class="icon">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                <path d="M12 11c0 3.517-1.009 6.799-2.753 9.571m-3.44-2.04l.054-.09A13.916 13.916 0 008 11a4 4 0 118 0c0 1.017-.07 2.019-.203 3m-2.118 6.844A21.88 21.88 0 0015.171 17m3.839 1.132c.645-2.266.99-4.659.99-7.132A8 8 0 008 4.07M3 15.364c.64-1.319 1-2.8 1-4.364 0-1.457.39-2.823 1.07-4"/>
+  <div class="toast-container" id="toastContainer"></div>
+
+  <div class="container">
+    <div class="card">
+      <div class="header">
+        <div class="logo">
+          <svg viewBox="0 0 24 24" width="32" height="32" fill="currentColor">
+            <path d="M17.81 4.47c-.08 0-.16-.02-.23-.06C15.66 3.42 14 3 12.01 3c-1.98 0-3.86.47-5.57 1.41-.24.13-.54.04-.68-.2-.13-.24-.04-.55.2-.68C7.82 2.52 9.86 2 12.01 2c2.13 0 3.99.47 6.03 1.52.25.13.34.43.21.67-.09.18-.26.28-.44.28zM3.5 9.72c-.1 0-.2-.03-.29-.09-.23-.16-.28-.47-.12-.7.99-1.4 2.25-2.5 3.75-3.27C9.98 4.04 14 4.03 17.15 5.65c1.5.77 2.76 1.86 3.75 3.25.16.22.11.54-.12.7-.23.16-.54.11-.7-.12-.9-1.26-2.04-2.25-3.39-2.94-2.87-1.47-6.54-1.47-9.4.01-1.36.7-2.5 1.7-3.4 2.96-.08.14-.23.21-.39.21zm6.25 12.07c-.13 0-.26-.05-.35-.15-.87-.87-1.34-1.43-2.01-2.64-.69-1.23-1.05-2.73-1.05-4.34 0-2.97 2.54-5.39 5.66-5.39s5.66 2.42 5.66 5.39c0 .28-.22.5-.5.5s-.5-.22-.5-.5c0-2.42-2.09-4.39-4.66-4.39-2.57 0-4.66 1.97-4.66 4.39 0 1.44.32 2.77.93 3.85.64 1.15 1.08 1.64 1.85 2.42.19.2.19.51 0 .71-.11.1-.24.15-.37.15zm7.17-1.85c-1.19 0-2.24-.3-3.1-.89-1.49-1.01-2.38-2.65-2.38-4.39 0-.28.22-.5.5-.5s.5.22.5.5c0 1.41.72 2.74 1.94 3.56.71.48 1.54.71 2.54.71.24 0 .64-.03 1.04-.1.27-.05.53.13.58.41.05.27-.13.53-.41.58-.57.11-1.07.12-1.21.12zM14.91 22c-.04 0-.09-.01-.13-.02-1.59-.44-2.63-1.03-3.72-2.1-1.4-1.39-2.17-3.24-2.17-5.22 0-1.62 1.38-2.94 3.08-2.94 1.7 0 3.08 1.32 3.08 2.94 0 1.07.93 1.94 2.08 1.94s2.08-.87 2.08-1.94c0-3.77-3.25-6.83-7.25-6.83-2.84 0-5.44 1.58-6.61 4.03-.39.81-.59 1.76-.59 2.8 0 .78.07 2.01.67 3.61.1.26-.03.55-.29.64-.26.1-.55-.04-.64-.29-.49-1.31-.73-2.61-.73-3.96 0-1.2.23-2.29.68-3.24 1.33-2.79 4.28-4.6 7.51-4.6 4.55 0 8.25 3.51 8.25 7.83 0 1.62-1.38 2.94-3.08 2.94s-3.08-1.32-3.08-2.94c0-1.07-.93-1.94-2.08-1.94s-2.08.87-2.08 1.94c0 1.71.66 3.31 1.87 4.51.95.94 1.86 1.46 3.27 1.85.27.07.42.35.35.61-.05.23-.26.38-.47.38z"/>
+          </svg>
+        </div>
+        <h1>Dr. Dangs Fingerprint Service</h1>
+        <p>Biometric Authentication System</p>
+      </div>
+
+      <div class="content">
+        <div class="status-card">
+          <div class="status-header">
+            <span class="status-title">Scanner Status</span>
+            <span class="status-badge disconnected" id="statusBadge">
+              <span class="status-dot"></span>
+              <span id="statusText">Disconnected</span>
+            </span>
+          </div>
+          <div class="device-info" id="deviceInfo">
+            <div class="info-row">
+              <span class="info-label">Device</span>
+              <span class="info-value" id="deviceName">Not detected</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">Port</span>
+              <span class="info-value">localhost:5050</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="fingerprint-area" id="fingerprintArea">
+          <div class="fingerprint-icon">
+            <svg viewBox="0 0 24 24" fill="currentColor">
+              <path d="M17.81 4.47c-.08 0-.16-.02-.23-.06C15.66 3.42 14 3 12.01 3c-1.98 0-3.86.47-5.57 1.41-.24.13-.54.04-.68-.2-.13-.24-.04-.55.2-.68C7.82 2.52 9.86 2 12.01 2c2.13 0 3.99.47 6.03 1.52.25.13.34.43.21.67-.09.18-.26.28-.44.28zM3.5 9.72c-.1 0-.2-.03-.29-.09-.23-.16-.28-.47-.12-.7.99-1.4 2.25-2.5 3.75-3.27C9.98 4.04 14 4.03 17.15 5.65c1.5.77 2.76 1.86 3.75 3.25.16.22.11.54-.12.7-.23.16-.54.11-.7-.12-.9-1.26-2.04-2.25-3.39-2.94-2.87-1.47-6.54-1.47-9.4.01-1.36.7-2.5 1.7-3.4 2.96-.08.14-.23.21-.39.21zm6.25 12.07c-.13 0-.26-.05-.35-.15-.87-.87-1.34-1.43-2.01-2.64-.69-1.23-1.05-2.73-1.05-4.34 0-2.97 2.54-5.39 5.66-5.39s5.66 2.42 5.66 5.39c0 .28-.22.5-.5.5s-.5-.22-.5-.5c0-2.42-2.09-4.39-4.66-4.39-2.57 0-4.66 1.97-4.66 4.39 0 1.44.32 2.77.93 3.85.64 1.15 1.08 1.64 1.85 2.42.19.2.19.51 0 .71-.11.1-.24.15-.37.15zm7.17-1.85c-1.19 0-2.24-.3-3.1-.89-1.49-1.01-2.38-2.65-2.38-4.39 0-.28.22-.5.5-.5s.5.22.5.5c0 1.41.72 2.74 1.94 3.56.71.48 1.54.71 2.54.71.24 0 .64-.03 1.04-.1.27-.05.53.13.58.41.05.27-.13.53-.41.58-.57.11-1.07.12-1.21.12zM14.91 22c-.04 0-.09-.01-.13-.02-1.59-.44-2.63-1.03-3.72-2.1-1.4-1.39-2.17-3.24-2.17-5.22 0-1.62 1.38-2.94 3.08-2.94 1.7 0 3.08 1.32 3.08 2.94 0 1.07.93 1.94 2.08 1.94s2.08-.87 2.08-1.94c0-3.77-3.25-6.83-7.25-6.83-2.84 0-5.44 1.58-6.61 4.03-.39.81-.59 1.76-.59 2.8 0 .78.07 2.01.67 3.61.1.26-.03.55-.29.64-.26.1-.55-.04-.64-.29-.49-1.31-.73-2.61-.73-3.96 0-1.2.23-2.29.68-3.24 1.33-2.79 4.28-4.6 7.51-4.6 4.55 0 8.25 3.51 8.25 7.83 0 1.62-1.38 2.94-3.08 2.94s-3.08-1.32-3.08-2.94c0-1.07-.93-1.94-2.08-1.94s-2.08.87-2.08 1.94c0 1.71.66 3.31 1.87 4.51.95.94 1.86 1.46 3.27 1.85.27.07.42.35.35.61-.05.23-.26.38-.47.38z"/>
             </svg>
+          </div>
+          <div class="fingerprint-image" id="fingerprintImage">
+            <canvas id="fingerprintCanvas" width="150" height="175"></canvas>
+          </div>
+          <p class="fingerprint-text" id="fingerprintText">Ready to scan</p>
+          <p class="fingerprint-subtext" id="fingerprintSubtext">Place your finger on the scanner</p>
+          <div class="quality-bar">
+            <div class="quality-label">
+              <span>Quality</span>
+              <span id="qualityValue">0%</span>
+            </div>
+            <div class="quality-track">
+              <div class="quality-fill" id="qualityFill" style="width: 0%"></div>
+            </div>
+          </div>
         </div>
 
-        <h1>Fingerprint Service</h1>
-
-        <div class="status">
-            <span class="status-dot"></span>
-            <span>Running on port 5050</span>
+        <div class="actions">
+          <button class="btn btn-primary" id="captureBtn" onclick="captureFingerprint()">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+            </svg>
+            Capture Fingerprint
+          </button>
+          <button class="btn btn-secondary" id="connectBtn" onclick="toggleConnection()">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/>
+            </svg>
+            <span id="connectBtnText">Connect Scanner</span>
+          </button>
         </div>
+      </div>
 
-        <div class="info">
-            Service is active. You can minimize this window.<br>
-            It will continue running in the menu bar.
+      <div class="footer">
+        <div class="service-info">
+          <span class="service-dot" id="serviceDot"></span>
+          <span class="service-text">Service running on port 5050</span>
         </div>
-
-        <button class="btn" onclick="openPortal()">Open Auth Portal</button>
+        <p class="footer-text">Dr. Dangs Lab &copy; 2025 | Version 1.0.0</p>
+      </div>
     </div>
+  </div>
 
-    <div class="footer">
-        Dr. Dangs Fingerprint Service v1.0.0
-    </div>
+  <script>
+    const API_BASE = 'http://localhost:5050';
+    let isConnected = false;
+    let isCapturing = false;
+    let lastCapturedImage = null;
 
-    <script>
-        function openPortal() {
-            window.open('https://auth.drdangscentrallab.com', '_blank');
+    // Toast notification
+    function showToast(message, type = 'success') {
+      const container = document.getElementById('toastContainer');
+      const toast = document.createElement('div');
+      toast.className = `toast ${type}`;
+
+      const icons = {
+        success: '<svg viewBox="0 0 24 24" fill="#10b981"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>',
+        error: '<svg viewBox="0 0 24 24" fill="#ef4444"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>',
+        warning: '<svg viewBox="0 0 24 24" fill="#f59e0b"><path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/></svg>'
+      };
+
+      toast.innerHTML = `
+        <div class="toast-icon">${icons[type]}</div>
+        <span class="toast-message">${message}</span>
+      `;
+
+      container.appendChild(toast);
+
+      setTimeout(() => {
+        toast.style.animation = 'slideIn 0.3s ease reverse';
+        setTimeout(() => toast.remove(), 300);
+      }, 3000);
+    }
+
+    // Update UI based on status
+    function updateStatus(status) {
+      const badge = document.getElementById('statusBadge');
+      const statusText = document.getElementById('statusText');
+      const deviceName = document.getElementById('deviceName');
+      const connectBtn = document.getElementById('connectBtn');
+      const connectBtnText = document.getElementById('connectBtnText');
+      const captureBtn = document.getElementById('captureBtn');
+
+      isConnected = status.connected;
+
+      if (status.capturing) {
+        badge.className = 'status-badge capturing';
+        statusText.textContent = 'Capturing...';
+      } else if (status.connected) {
+        badge.className = 'status-badge connected';
+        statusText.textContent = 'Connected';
+        connectBtnText.textContent = 'Disconnect';
+      } else {
+        badge.className = 'status-badge disconnected';
+        statusText.textContent = 'Disconnected';
+        connectBtnText.textContent = 'Connect Scanner';
+      }
+
+      if (status.deviceInfo) {
+        deviceName.textContent = status.deviceInfo.productName || 'SecuGen Scanner';
+      } else {
+        deviceName.textContent = 'Not detected';
+      }
+
+      captureBtn.disabled = !status.connected || status.capturing;
+    }
+
+    // Fetch status
+    async function fetchStatus() {
+      try {
+        const response = await fetch(`${API_BASE}/scanner/status`);
+        const status = await response.json();
+        updateStatus(status);
+        document.getElementById('serviceDot').style.background = '#10b981';
+      } catch (err) {
+        document.getElementById('serviceDot').style.background = '#ef4444';
+        updateStatus({ connected: false, capturing: false });
+      }
+    }
+
+    // Toggle connection
+    async function toggleConnection() {
+      const btn = document.getElementById('connectBtn');
+      btn.disabled = true;
+
+      try {
+        if (isConnected) {
+          await fetch(`${API_BASE}/scanner/disconnect`, { method: 'POST' });
+          showToast('Scanner disconnected', 'warning');
+        } else {
+          const response = await fetch(`${API_BASE}/scanner/connect`, { method: 'POST' });
+          const result = await response.json();
+
+          if (result.success) {
+            showToast('Scanner connected successfully!', 'success');
+          } else {
+            showToast(result.error || 'Failed to connect', 'error');
+          }
         }
-    </script>
+      } catch (err) {
+        showToast('Connection error: ' + err.message, 'error');
+      }
+
+      btn.disabled = false;
+      fetchStatus();
+    }
+
+    // Capture fingerprint
+    async function captureFingerprint() {
+      const btn = document.getElementById('captureBtn');
+      const area = document.getElementById('fingerprintArea');
+      const text = document.getElementById('fingerprintText');
+      const subtext = document.getElementById('fingerprintSubtext');
+
+      btn.disabled = true;
+      btn.innerHTML = '<div class="spinner"></div> Capturing...';
+      area.className = 'fingerprint-area active';
+      text.textContent = 'Scanning...';
+      subtext.textContent = 'Keep your finger steady';
+
+      try {
+        const response = await fetch(`${API_BASE}/scanner/capture`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ timeout: 10000, minQuality: 40 })
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+          area.className = 'fingerprint-area success';
+          text.textContent = 'Capture successful!';
+          subtext.textContent = 'Fingerprint captured and ready';
+
+          // Display quality
+          document.getElementById('qualityValue').textContent = result.quality + '%';
+          document.getElementById('qualityFill').style.width = result.quality + '%';
+
+          // Draw fingerprint image
+          if (result.image) {
+            drawFingerprint(result.image, result.width, result.height);
+          }
+
+          lastCapturedImage = result;
+          showToast(`Fingerprint captured! Quality: ${result.quality}%`, 'success');
+        } else {
+          throw new Error(result.error || 'Capture failed');
+        }
+      } catch (err) {
+        area.className = 'fingerprint-area';
+        text.textContent = 'Capture failed';
+        subtext.textContent = err.message;
+        showToast(err.message, 'error');
+      }
+
+      btn.disabled = false;
+      btn.innerHTML = `
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+        </svg>
+        Capture Fingerprint
+      `;
+
+      fetchStatus();
+    }
+
+    // Draw fingerprint on canvas
+    function drawFingerprint(imageBase64, width, height) {
+      const canvas = document.getElementById('fingerprintCanvas');
+      const ctx = canvas.getContext('2d');
+
+      try {
+        const imageData = atob(imageBase64);
+        const imgData = ctx.createImageData(width, height);
+
+        for (let i = 0; i < imageData.length && i < width * height; i++) {
+          const pixel = imageData.charCodeAt(i);
+          const idx = i * 4;
+          imgData.data[idx] = pixel;     // R
+          imgData.data[idx + 1] = pixel; // G
+          imgData.data[idx + 2] = pixel; // B
+          imgData.data[idx + 3] = 255;   // A
+        }
+
+        // Scale to canvas size
+        const tempCanvas = document.createElement('canvas');
+        tempCanvas.width = width;
+        tempCanvas.height = height;
+        tempCanvas.getContext('2d').putImageData(imgData, 0, 0);
+
+        ctx.drawImage(tempCanvas, 0, 0, width, height, 0, 0, canvas.width, canvas.height);
+      } catch (e) {
+        console.error('Error drawing fingerprint:', e);
+      }
+    }
+
+    // Initialize
+    fetchStatus();
+    setInterval(fetchStatus, 3000);
+  </script>
 </body>
 </html>
