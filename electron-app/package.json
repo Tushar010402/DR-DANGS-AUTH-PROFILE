@@ -31,14 +31,10 @@
       "gatekeeperAssess": false,
       "entitlements": "entitlements.mac.plist",
       "entitlementsInherit": "entitlements.mac.plist",
-      "identity": "Apple Development: Tushar Agrawal (82236W3MQY)",
+      "identity": "Tushar Agrawal (CS33T79968)",
       "target": [
         {
           "target": "dmg",
-          "arch": ["universal"]
-        },
-        {
-          "target": "zip",
           "arch": ["universal"]
         }
       ],
