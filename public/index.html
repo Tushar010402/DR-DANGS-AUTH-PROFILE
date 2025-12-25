@@ -1,0 +1,1509 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CT-AUTH-PORTAL - Fingerprint Authentication</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #3b82f6;
+            --primary-dark: #2563eb;
+            --primary-light: #60a5fa;
+            --success: #10b981;
+            --success-light: #34d399;
+            --error: #ef4444;
+            --warning: #f59e0b;
+            --bg-dark: #0f172a;
+            --bg-card: #1e293b;
+            --bg-elevated: #334155;
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+            --border: #475569;
+            --glow-primary: rgba(59, 130, 246, 0.5);
+            --glow-success: rgba(16, 185, 129, 0.5);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-dark);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* Animated Background */
+        .bg-pattern {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background:
+                radial-gradient(circle at 20% 50%, rgba(59, 130, 246, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 80% 20%, rgba(16, 185, 129, 0.08) 0%, transparent 40%),
+                radial-gradient(circle at 50% 80%, rgba(139, 92, 246, 0.08) 0%, transparent 40%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .app-container {
+            position: relative;
+            z-index: 1;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Header */
+        header {
+            background: linear-gradient(135deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.95) 100%);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--border);
+            padding: 20px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .logo-icon {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 15px var(--glow-primary);
+        }
+
+        .logo-icon svg {
+            width: 24px;
+            height: 24px;
+            color: white;
+        }
+
+        .logo-text {
+            font-size: 1.4rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--text-primary) 0%, var(--text-secondary) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .scanner-indicator {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 20px;
+            background: var(--bg-elevated);
+            border-radius: 30px;
+            border: 1px solid var(--border);
+        }
+
+        .scanner-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: var(--error);
+            box-shadow: 0 0 10px var(--error);
+            transition: all 0.3s;
+        }
+
+        .scanner-dot.connected {
+            background: var(--success);
+            box-shadow: 0 0 10px var(--success);
+            animation: pulse 2s infinite;
+        }
+
+        .scanner-dot.scanning {
+            background: var(--warning);
+            box-shadow: 0 0 10px var(--warning);
+            animation: pulse 0.5s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.7; transform: scale(1.1); }
+        }
+
+        .scanner-text {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+        }
+
+        /* Main Content */
+        main {
+            flex: 1;
+            padding: 30px;
+            max-width: 1400px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        /* Tabs */
+        .tabs-container {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 30px;
+        }
+
+        .tabs {
+            display: flex;
+            background: var(--bg-card);
+            padding: 5px;
+            border-radius: 15px;
+            border: 1px solid var(--border);
+        }
+
+        .tab-btn {
+            padding: 12px 35px;
+            border: none;
+            background: transparent;
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+            font-weight: 500;
+            cursor: pointer;
+            border-radius: 12px;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .tab-btn:hover {
+            color: var(--text-primary);
+            background: var(--bg-elevated);
+        }
+
+        .tab-btn.active {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white;
+            box-shadow: 0 4px 15px var(--glow-primary);
+        }
+
+        .tab-btn svg {
+            width: 18px;
+            height: 18px;
+        }
+
+        /* Tab Content */
+        .tab-content {
+            display: none;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Cards */
+        .card {
+            background: var(--bg-card);
+            border-radius: 20px;
+            border: 1px solid var(--border);
+            overflow: hidden;
+        }
+
+        .card-header {
+            padding: 25px 30px;
+            border-bottom: 1px solid var(--border);
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, transparent 100%);
+        }
+
+        .card-header h2 {
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .card-header h2 svg {
+            width: 24px;
+            height: 24px;
+            color: var(--primary);
+        }
+
+        .card-body {
+            padding: 30px;
+        }
+
+        /* Grid Layout */
+        .two-column {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+        }
+
+        @media (max-width: 900px) {
+            .two-column {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Form Styles */
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: var(--text-secondary);
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 14px 18px;
+            background: var(--bg-elevated);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            color: var(--text-primary);
+            font-size: 1rem;
+            transition: all 0.3s;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px var(--glow-primary);
+        }
+
+        .form-group input::placeholder {
+            color: var(--text-muted);
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        @media (max-width: 600px) {
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Fingerprint Scanner Area */
+        .scanner-area {
+            background: linear-gradient(145deg, var(--bg-elevated) 0%, var(--bg-dark) 100%);
+            border-radius: 20px;
+            padding: 40px;
+            text-align: center;
+            border: 2px dashed var(--border);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .scanner-area::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(59, 130, 246, 0.1), transparent);
+            transition: left 0.5s;
+        }
+
+        .scanner-area.scanning::before {
+            animation: scanLine 1.5s infinite;
+        }
+
+        @keyframes scanLine {
+            0% { left: -100%; }
+            100% { left: 100%; }
+        }
+
+        .fingerprint-display {
+            width: 180px;
+            height: 200px;
+            margin: 0 auto 25px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            border: 2px solid var(--border);
+            overflow: hidden;
+            transition: all 0.3s;
+        }
+
+        .fingerprint-display.success {
+            border-color: var(--success);
+            box-shadow: 0 0 30px var(--glow-success);
+        }
+
+        .fingerprint-display.error {
+            border-color: var(--error);
+            box-shadow: 0 0 20px rgba(239, 68, 68, 0.3);
+        }
+
+        .fingerprint-display img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .fingerprint-display svg {
+            width: 80px;
+            height: 80px;
+            color: var(--text-muted);
+        }
+
+        .scanner-status-text {
+            font-size: 1.1rem;
+            color: var(--text-secondary);
+            margin-bottom: 10px;
+        }
+
+        .scanner-hint {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+        }
+
+        .quality-display {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            background: var(--bg-elevated);
+            border-radius: 20px;
+            margin-top: 15px;
+            font-size: 0.9rem;
+        }
+
+        .quality-bar {
+            width: 100px;
+            height: 6px;
+            background: var(--bg-dark);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .quality-fill {
+            height: 100%;
+            background: var(--success);
+            border-radius: 3px;
+            transition: width 0.3s;
+        }
+
+        /* Buttons */
+        .btn {
+            padding: 14px 30px;
+            border: none;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .btn svg {
+            width: 20px;
+            height: 20px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white;
+            box-shadow: 0 4px 15px var(--glow-primary);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px var(--glow-primary);
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, var(--success) 0%, #059669 100%);
+            color: white;
+            box-shadow: 0 4px 15px var(--glow-success);
+        }
+
+        .btn-success:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px var(--glow-success);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin-top: 25px;
+        }
+
+        /* Messages */
+        .message {
+            padding: 15px 20px;
+            border-radius: 12px;
+            margin: 15px 0;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateX(-20px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        .message svg {
+            width: 24px;
+            height: 24px;
+            flex-shrink: 0;
+        }
+
+        .message.success {
+            background: rgba(16, 185, 129, 0.15);
+            border: 1px solid var(--success);
+            color: var(--success-light);
+        }
+
+        .message.error {
+            background: rgba(239, 68, 68, 0.15);
+            border: 1px solid var(--error);
+            color: #fca5a5;
+        }
+
+        .message.info {
+            background: rgba(59, 130, 246, 0.15);
+            border: 1px solid var(--primary);
+            color: var(--primary-light);
+        }
+
+        /* Profile Card */
+        .profile-card {
+            display: none;
+            background: var(--bg-card);
+            border-radius: 20px;
+            overflow: hidden;
+            border: 1px solid var(--border);
+            margin-top: 25px;
+        }
+
+        .profile-card.visible {
+            display: block;
+            animation: slideUp 0.5s ease;
+        }
+
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .profile-header {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            padding: 40px 30px;
+            text-align: center;
+            position: relative;
+        }
+
+        .profile-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.05'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+            opacity: 0.5;
+        }
+
+        .profile-photo {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            border: 4px solid white;
+            margin: 0 auto 15px;
+            object-fit: cover;
+            background: rgba(255, 255, 255, 0.2);
+            position: relative;
+        }
+
+        .profile-name {
+            font-size: 1.6rem;
+            font-weight: 600;
+            margin-bottom: 8px;
+            position: relative;
+        }
+
+        .profile-badge {
+            display: inline-block;
+            padding: 6px 16px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 20px;
+            font-size: 0.9rem;
+            position: relative;
+        }
+
+        .match-score {
+            padding: 25px;
+            text-align: center;
+            background: rgba(16, 185, 129, 0.1);
+        }
+
+        .match-score-value {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--success);
+        }
+
+        .match-score-label {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            margin-top: 5px;
+        }
+
+        .profile-details {
+            padding: 25px 30px;
+        }
+
+        .profile-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .profile-row:last-child {
+            border-bottom: none;
+        }
+
+        .profile-label {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+
+        .profile-value {
+            color: var(--text-primary);
+            font-weight: 500;
+        }
+
+        /* Users Grid */
+        .users-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .user-card {
+            background: var(--bg-elevated);
+            border-radius: 16px;
+            padding: 20px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            border: 1px solid var(--border);
+            transition: all 0.3s;
+        }
+
+        .user-card:hover {
+            border-color: var(--primary);
+            transform: translateY(-2px);
+        }
+
+        .user-avatar {
+            width: 55px;
+            height: 55px;
+            border-radius: 14px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: white;
+            flex-shrink: 0;
+        }
+
+        .user-info h3 {
+            font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .user-info p {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+
+        .user-quality {
+            margin-left: auto;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .quality-high {
+            background: rgba(16, 185, 129, 0.2);
+            color: var(--success);
+        }
+
+        .quality-medium {
+            background: rgba(245, 158, 11, 0.2);
+            color: var(--warning);
+        }
+
+        .quality-low {
+            background: rgba(239, 68, 68, 0.2);
+            color: var(--error);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 30px;
+            color: var(--text-muted);
+        }
+
+        .empty-state svg {
+            width: 80px;
+            height: 80px;
+            margin-bottom: 20px;
+            opacity: 0.5;
+        }
+
+        /* Stats */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: var(--bg-elevated);
+            border-radius: 16px;
+            padding: 25px;
+            border: 1px solid var(--border);
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--primary-light);
+        }
+
+        .stat-label {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            margin-top: 5px;
+        }
+
+        /* Photo Upload */
+        .photo-upload {
+            position: relative;
+            width: 100px;
+            height: 100px;
+            margin: 10px 0;
+        }
+
+        .photo-preview {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 3px solid var(--border);
+        }
+
+        .photo-upload-placeholder {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            background: var(--bg-elevated);
+            border: 2px dashed var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .photo-upload-placeholder:hover {
+            border-color: var(--primary);
+        }
+
+        .photo-upload-placeholder svg {
+            width: 30px;
+            height: 30px;
+            color: var(--text-muted);
+        }
+
+        .photo-upload input[type="file"] {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            cursor: pointer;
+        }
+
+        /* WebSocket Status */
+        .ws-status {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 10px 20px;
+            background: var(--bg-card);
+            border-radius: 30px;
+            border: 1px solid var(--border);
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            z-index: 1000;
+        }
+
+        .ws-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--error);
+        }
+
+        .ws-dot.connected {
+            background: var(--success);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            header {
+                flex-direction: column;
+                gap: 15px;
+                padding: 15px 20px;
+            }
+
+            main {
+                padding: 20px;
+            }
+
+            .tabs {
+                flex-direction: column;
+                width: 100%;
+            }
+
+            .tab-btn {
+                justify-content: center;
+            }
+
+            .btn-group {
+                flex-direction: column;
+            }
+
+            .btn {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="bg-pattern"></div>
+
+    <div class="app-container">
+        <header>
+            <div class="logo">
+                <div class="logo-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 11c0 3.517-1.009 6.799-2.753 9.571m-3.44-2.04l.054-.09A13.916 13.916 0 008 11a4 4 0 118 0c0 1.017-.07 2.019-.203 3m-2.118 6.844A21.88 21.88 0 0015.171 17m3.839 1.132c.645-2.266.99-4.659.99-7.132A8 8 0 008 4.07M3 15.364c.64-1.319 1-2.8 1-4.364 0-1.457.39-2.823 1.07-4"/>
+                    </svg>
+                </div>
+                <span class="logo-text">CT-AUTH-PORTAL</span>
+            </div>
+
+            <div class="scanner-indicator">
+                <span class="scanner-dot" id="scannerDot"></span>
+                <span class="scanner-text" id="scannerText">Connecting...</span>
+            </div>
+        </header>
+
+        <main>
+            <div class="tabs-container">
+                <div class="tabs">
+                    <button class="tab-btn active" data-tab="register">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M16 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/>
+                            <circle cx="8.5" cy="7" r="4"/>
+                            <line x1="20" y1="8" x2="20" y2="14"/>
+                            <line x1="23" y1="11" x2="17" y2="11"/>
+                        </svg>
+                        Register
+                    </button>
+                    <button class="tab-btn" data-tab="verify">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M22 11.08V12a10 10 0 11-5.93-9.14"/>
+                            <polyline points="22 4 12 14.01 9 11.01"/>
+                        </svg>
+                        Verify
+                    </button>
+                    <button class="tab-btn" data-tab="users">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/>
+                            <circle cx="9" cy="7" r="4"/>
+                            <path d="M23 21v-2a4 4 0 00-3-3.87"/>
+                            <path d="M16 3.13a4 4 0 010 7.75"/>
+                        </svg>
+                        Users
+                    </button>
+                </div>
+            </div>
+
+            <!-- Register Tab -->
+            <div id="register" class="tab-content active">
+                <div class="two-column">
+                    <div class="card">
+                        <div class="card-header">
+                            <h2>
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/>
+                                    <circle cx="12" cy="7" r="4"/>
+                                </svg>
+                                User Information
+                            </h2>
+                        </div>
+                        <div class="card-body">
+                            <form id="registerForm">
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label>Full Name *</label>
+                                        <input type="text" id="regName" placeholder="Enter full name" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Employee ID</label>
+                                        <input type="text" id="regEmployeeId" placeholder="EMP001">
+                                    </div>
+                                </div>
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label>Email</label>
+                                        <input type="email" id="regEmail" placeholder="email@company.com">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Phone</label>
+                                        <input type="tel" id="regPhone" placeholder="+1 234 567 8900">
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label>Department</label>
+                                    <input type="text" id="regDepartment" placeholder="Engineering, HR, Sales...">
+                                </div>
+                                <div class="form-group">
+                                    <label>Profile Photo</label>
+                                    <div class="photo-upload">
+                                        <div class="photo-upload-placeholder" id="photoPlaceholder">
+                                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                                                <circle cx="8.5" cy="8.5" r="1.5"/>
+                                                <polyline points="21 15 16 10 5 21"/>
+                                            </svg>
+                                        </div>
+                                        <img id="photoPreview" class="photo-preview" style="display: none;">
+                                        <input type="file" id="regPhoto" accept="image/*">
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <h2>
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M12 11c0 3.517-1.009 6.799-2.753 9.571"/>
+                                    <path d="M8 11a4 4 0 118 0"/>
+                                </svg>
+                                Fingerprint Capture
+                            </h2>
+                        </div>
+                        <div class="card-body">
+                            <div class="scanner-area" id="regScannerArea">
+                                <div class="fingerprint-display" id="regFingerprintDisplay">
+                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                        <path d="M12 11c0 3.517-1.009 6.799-2.753 9.571m-3.44-2.04l.054-.09A13.916 13.916 0 008 11a4 4 0 118 0c0 1.017-.07 2.019-.203 3m-2.118 6.844A21.88 21.88 0 0015.171 17m3.839 1.132c.645-2.266.99-4.659.99-7.132A8 8 0 008 4.07M3 15.364c.64-1.319 1-2.8 1-4.364 0-1.457.39-2.823 1.07-4"/>
+                                    </svg>
+                                </div>
+                                <p class="scanner-status-text" id="regStatusText">Ready to capture</p>
+                                <p class="scanner-hint" id="regHintText">Click the button below and place your finger on the scanner</p>
+                                <div class="quality-display" id="regQualityDisplay" style="display: none;">
+                                    <span>Quality:</span>
+                                    <div class="quality-bar">
+                                        <div class="quality-fill" id="regQualityFill" style="width: 0%"></div>
+                                    </div>
+                                    <span id="regQualityValue">0%</span>
+                                </div>
+                            </div>
+
+                            <div id="regMessage"></div>
+
+                            <div class="btn-group">
+                                <button type="button" class="btn btn-primary" id="captureRegBtn">
+                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <circle cx="12" cy="12" r="10"/>
+                                        <circle cx="12" cy="12" r="3"/>
+                                    </svg>
+                                    Capture Fingerprint
+                                </button>
+                                <button type="button" class="btn btn-success" id="registerBtn" disabled>
+                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/>
+                                        <polyline points="17 21 17 13 7 13 7 21"/>
+                                        <polyline points="7 3 7 8 15 8"/>
+                                    </svg>
+                                    Register User
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Verify Tab -->
+            <div id="verify" class="tab-content">
+                <div class="card" style="max-width: 600px; margin: 0 auto;">
+                    <div class="card-header">
+                        <h2>
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M22 11.08V12a10 10 0 11-5.93-9.14"/>
+                                <polyline points="22 4 12 14.01 9 11.01"/>
+                            </svg>
+                            Verify Identity
+                        </h2>
+                    </div>
+                    <div class="card-body">
+                        <div class="scanner-area" id="verifyScannerArea">
+                            <div class="fingerprint-display" id="verifyFingerprintDisplay">
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                    <path d="M12 11c0 3.517-1.009 6.799-2.753 9.571m-3.44-2.04l.054-.09A13.916 13.916 0 008 11a4 4 0 118 0c0 1.017-.07 2.019-.203 3m-2.118 6.844A21.88 21.88 0 0015.171 17m3.839 1.132c.645-2.266.99-4.659.99-7.132A8 8 0 008 4.07M3 15.364c.64-1.319 1-2.8 1-4.364 0-1.457.39-2.823 1.07-4"/>
+                                </svg>
+                            </div>
+                            <p class="scanner-status-text" id="verifyStatusText">Ready to verify</p>
+                            <p class="scanner-hint" id="verifyHintText">Scan your fingerprint to access your profile</p>
+                        </div>
+
+                        <div id="verifyMessage"></div>
+
+                        <div class="btn-group">
+                            <button type="button" class="btn btn-primary" id="verifyBtn">
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M9 12l2 2 4-4"/>
+                                    <circle cx="12" cy="12" r="10"/>
+                                </svg>
+                                Scan & Verify
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="profile-card" id="profileCard">
+                    <div class="profile-header">
+                        <img id="profilePhoto" class="profile-photo" src="" alt="">
+                        <h2 class="profile-name" id="profileName"></h2>
+                        <span class="profile-badge" id="profileBadge"></span>
+                    </div>
+                    <div class="match-score">
+                        <div class="match-score-value" id="matchScore">0%</div>
+                        <div class="match-score-label">Match Score</div>
+                    </div>
+                    <div class="profile-details">
+                        <div class="profile-row">
+                            <span class="profile-label">Employee ID</span>
+                            <span class="profile-value" id="profileEmployeeId">-</span>
+                        </div>
+                        <div class="profile-row">
+                            <span class="profile-label">Email</span>
+                            <span class="profile-value" id="profileEmail">-</span>
+                        </div>
+                        <div class="profile-row">
+                            <span class="profile-label">Phone</span>
+                            <span class="profile-value" id="profilePhone">-</span>
+                        </div>
+                        <div class="profile-row">
+                            <span class="profile-label">Department</span>
+                            <span class="profile-value" id="profileDepartment">-</span>
+                        </div>
+                        <div class="profile-row">
+                            <span class="profile-label">Registered</span>
+                            <span class="profile-value" id="profileCreatedAt">-</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Users Tab -->
+            <div id="users" class="tab-content">
+                <div class="stats-grid" id="statsGrid">
+                    <div class="stat-card">
+                        <div class="stat-value" id="statTotalUsers">0</div>
+                        <div class="stat-label">Total Users</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="statTodayRegistrations">0</div>
+                        <div class="stat-label">Today's Registrations</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="statAvgQuality">0%</div>
+                        <div class="stat-label">Avg. Fingerprint Quality</div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h2>
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/>
+                                <circle cx="9" cy="7" r="4"/>
+                                <path d="M23 21v-2a4 4 0 00-3-3.87"/>
+                                <path d="M16 3.13a4 4 0 010 7.75"/>
+                            </svg>
+                            Registered Users
+                        </h2>
+                    </div>
+                    <div class="card-body">
+                        <div id="usersGrid" class="users-grid"></div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <div class="ws-status">
+        <span class="ws-dot" id="wsDot"></span>
+        <span id="wsText">Connecting...</span>
+    </div>
+
+    <script>
+        // ========== Configuration ==========
+        const API_BASE = window.location.origin + '/api';
+        const WS_URL = `ws://${window.location.host}/ws`;
+
+        // ========== State ==========
+        let ws = null;
+        let isConnected = false;
+        let capturedTemplate = null;
+        let capturedQuality = 0;
+
+        // ========== WebSocket ==========
+        function connectWebSocket() {
+            ws = new WebSocket(WS_URL);
+
+            ws.onopen = () => {
+                document.getElementById('wsDot').classList.add('connected');
+                document.getElementById('wsText').textContent = 'Connected';
+            };
+
+            ws.onmessage = (event) => {
+                const msg = JSON.parse(event.data);
+                handleWebSocketMessage(msg);
+            };
+
+            ws.onclose = () => {
+                document.getElementById('wsDot').classList.remove('connected');
+                document.getElementById('wsText').textContent = 'Disconnected';
+                setTimeout(connectWebSocket, 3000);
+            };
+
+            ws.onerror = () => {
+                document.getElementById('wsText').textContent = 'Error';
+            };
+        }
+
+        function handleWebSocketMessage(msg) {
+            switch (msg.type) {
+                case 'status':
+                    updateScannerStatus(msg.data);
+                    break;
+                case 'scannerConnected':
+                    updateScannerStatus({ connected: true, ...msg.data });
+                    break;
+                case 'scannerDisconnected':
+                    updateScannerStatus({ connected: false });
+                    break;
+                case 'fingerDetected':
+                    showMessage('reg', 'Finger detected! Capturing...', 'info');
+                    break;
+                case 'userRegistered':
+                    loadStats();
+                    loadUsers();
+                    break;
+            }
+        }
+
+        function updateScannerStatus(status) {
+            const dot = document.getElementById('scannerDot');
+            const text = document.getElementById('scannerText');
+
+            if (status.connected) {
+                dot.classList.add('connected');
+                text.textContent = status.deviceInfo?.productName || 'Scanner Connected';
+                isConnected = true;
+            } else {
+                dot.classList.remove('connected');
+                text.textContent = status.error || 'Scanner Disconnected';
+                isConnected = false;
+            }
+        }
+
+        // ========== Tab Switching ==========
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const tabId = btn.dataset.tab;
+
+                document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+
+                btn.classList.add('active');
+                document.getElementById(tabId).classList.add('active');
+
+                if (tabId === 'users') {
+                    loadStats();
+                    loadUsers();
+                }
+            });
+        });
+
+        // ========== Photo Upload ==========
+        document.getElementById('regPhoto').addEventListener('change', function() {
+            const preview = document.getElementById('photoPreview');
+            const placeholder = document.getElementById('photoPlaceholder');
+
+            if (this.files && this.files[0]) {
+                const reader = new FileReader();
+                reader.onload = e => {
+                    preview.src = e.target.result;
+                    preview.style.display = 'block';
+                    placeholder.style.display = 'none';
+                };
+                reader.readAsDataURL(this.files[0]);
+            }
+        });
+
+        // ========== Fingerprint Capture ==========
+        document.getElementById('captureRegBtn').addEventListener('click', () => captureFingerprint('register'));
+        document.getElementById('verifyBtn').addEventListener('click', () => verifyFingerprint());
+        document.getElementById('registerBtn').addEventListener('click', () => registerUser());
+
+        async function captureFingerprint(mode) {
+            const prefix = mode === 'register' ? 'reg' : 'verify';
+            const display = document.getElementById(`${prefix}FingerprintDisplay`);
+            const statusText = document.getElementById(`${prefix}StatusText`);
+            const hintText = document.getElementById(`${prefix}HintText`);
+            const area = document.getElementById(`${prefix}ScannerArea`);
+            const btn = document.getElementById(mode === 'register' ? 'captureRegBtn' : 'verifyBtn');
+
+            // Update UI for scanning
+            area.classList.add('scanning');
+            display.classList.remove('success', 'error');
+            statusText.textContent = 'Place your finger on the scanner...';
+            hintText.textContent = 'Waiting for fingerprint...';
+            btn.disabled = true;
+            document.getElementById('scannerDot').classList.add('scanning');
+
+            try {
+                const res = await fetch(`${API_BASE}/scanner/capture`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ timeout: 15000, minQuality: 40 })
+                });
+
+                const data = await res.json();
+
+                area.classList.remove('scanning');
+                document.getElementById('scannerDot').classList.remove('scanning');
+
+                if (data.success) {
+                    display.classList.add('success');
+
+                    // Show fingerprint image
+                    if (data.image) {
+                        display.innerHTML = `<img src="data:image/png;base64,${data.image}" alt="Fingerprint">`;
+                    }
+
+                    statusText.textContent = 'Fingerprint captured successfully!';
+                    hintText.textContent = `Quality: ${data.quality}%`;
+
+                    if (mode === 'register') {
+                        capturedTemplate = data.template;
+                        capturedQuality = data.quality;
+                        document.getElementById('registerBtn').disabled = false;
+
+                        // Show quality indicator
+                        const qualityDisplay = document.getElementById('regQualityDisplay');
+                        const qualityFill = document.getElementById('regQualityFill');
+                        const qualityValue = document.getElementById('regQualityValue');
+
+                        qualityDisplay.style.display = 'inline-flex';
+                        qualityFill.style.width = `${data.quality}%`;
+                        qualityFill.style.background = data.quality >= 70 ? 'var(--success)' :
+                                                        data.quality >= 50 ? 'var(--warning)' : 'var(--error)';
+                        qualityValue.textContent = `${data.quality}%`;
+
+                        showMessage('reg', 'Fingerprint captured! Click "Register User" to complete.', 'success');
+                    }
+
+                    return data;
+                } else {
+                    throw new Error(data.error);
+                }
+            } catch (error) {
+                area.classList.remove('scanning');
+                document.getElementById('scannerDot').classList.remove('scanning');
+                display.classList.add('error');
+                statusText.textContent = 'Capture failed';
+                hintText.textContent = error.message;
+                showMessage(prefix, error.message, 'error');
+                return null;
+            } finally {
+                btn.disabled = false;
+            }
+        }
+
+        async function verifyFingerprint() {
+            const captured = await captureFingerprint('verify');
+            if (!captured) return;
+
+            const statusText = document.getElementById('verifyStatusText');
+            statusText.textContent = 'Verifying identity...';
+
+            try {
+                const res = await fetch(`${API_BASE}/users/verify`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ fingerprintTemplate: captured.template })
+                });
+
+                const data = await res.json();
+
+                if (data.verified) {
+                    statusText.textContent = 'Identity verified!';
+                    showMessage('verify', `Welcome back, ${data.user.name}!`, 'success');
+                    showProfile(data.user, data.matchScore);
+                } else {
+                    document.getElementById('verifyFingerprintDisplay').classList.add('error');
+                    statusText.textContent = 'Not recognized';
+                    showMessage('verify', 'Fingerprint not found. Please register first.', 'error');
+                    document.getElementById('profileCard').classList.remove('visible');
+                }
+            } catch (error) {
+                statusText.textContent = 'Verification failed';
+                showMessage('verify', error.message, 'error');
+            }
+        }
+
+        async function registerUser() {
+            if (!capturedTemplate) {
+                showMessage('reg', 'Please capture fingerprint first', 'error');
+                return;
+            }
+
+            const name = document.getElementById('regName').value.trim();
+            if (!name) {
+                showMessage('reg', 'Please enter name', 'error');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('name', name);
+            formData.append('email', document.getElementById('regEmail').value.trim());
+            formData.append('phone', document.getElementById('regPhone').value.trim());
+            formData.append('department', document.getElementById('regDepartment').value.trim());
+            formData.append('employeeId', document.getElementById('regEmployeeId').value.trim());
+            formData.append('fingerprintTemplate', capturedTemplate);
+            formData.append('fingerprintQuality', capturedQuality);
+
+            const photoInput = document.getElementById('regPhoto');
+            if (photoInput.files[0]) {
+                formData.append('photo', photoInput.files[0]);
+            }
+
+            try {
+                const res = await fetch(`${API_BASE}/users/register`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await res.json();
+
+                if (data.success) {
+                    showMessage('reg', `${name} registered successfully!`, 'success');
+                    resetRegisterForm();
+                } else {
+                    showMessage('reg', data.error, 'error');
+                }
+            } catch (error) {
+                showMessage('reg', 'Registration failed: ' + error.message, 'error');
+            }
+        }
+
+        function resetRegisterForm() {
+            document.getElementById('registerForm').reset();
+            document.getElementById('photoPreview').style.display = 'none';
+            document.getElementById('photoPlaceholder').style.display = 'flex';
+            capturedTemplate = null;
+            capturedQuality = 0;
+            document.getElementById('registerBtn').disabled = true;
+            document.getElementById('regQualityDisplay').style.display = 'none';
+
+            const display = document.getElementById('regFingerprintDisplay');
+            display.classList.remove('success', 'error');
+            display.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <path d="M12 11c0 3.517-1.009 6.799-2.753 9.571m-3.44-2.04l.054-.09A13.916 13.916 0 008 11a4 4 0 118 0c0 1.017-.07 2.019-.203 3m-2.118 6.844A21.88 21.88 0 0015.171 17m3.839 1.132c.645-2.266.99-4.659.99-7.132A8 8 0 008 4.07M3 15.364c.64-1.319 1-2.8 1-4.364 0-1.457.39-2.823 1.07-4"/>
+            </svg>`;
+
+            document.getElementById('regStatusText').textContent = 'Ready to capture';
+            document.getElementById('regHintText').textContent = 'Click the button below and place your finger on the scanner';
+        }
+
+        function showMessage(prefix, text, type) {
+            const container = document.getElementById(`${prefix}Message`);
+            const icons = {
+                success: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>',
+                error: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>',
+                info: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>'
+            };
+
+            container.innerHTML = `<div class="message ${type}">${icons[type]}<span>${text}</span></div>`;
+
+            // Auto-hide after 5 seconds
+            setTimeout(() => {
+                container.innerHTML = '';
+            }, 5000);
+        }
+
+        function showProfile(user, score) {
+            const card = document.getElementById('profileCard');
+
+            document.getElementById('profileName').textContent = user.name;
+            document.getElementById('profileBadge').textContent = user.department || 'Team Member';
+            document.getElementById('profileEmployeeId').textContent = user.employeeId || '-';
+            document.getElementById('profileEmail').textContent = user.email || '-';
+            document.getElementById('profilePhone').textContent = user.phone || '-';
+            document.getElementById('profileDepartment').textContent = user.department || '-';
+            document.getElementById('profileCreatedAt').textContent = user.createdAt ? new Date(user.createdAt).toLocaleDateString() : '-';
+            document.getElementById('matchScore').textContent = Math.min(score, 100) + '%';
+
+            const photo = document.getElementById('profilePhoto');
+            if (user.photoPath) {
+                photo.src = user.photoPath;
+            } else {
+                photo.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='white'%3E%3Ccircle cx='12' cy='8' r='4'/%3E%3Cpath d='M20 21v-2a8 8 0 0 0-16 0v2'/%3E%3C/svg%3E";
+            }
+
+            card.classList.add('visible');
+        }
+
+        // ========== Users & Stats ==========
+        async function loadStats() {
+            try {
+                const res = await fetch(`${API_BASE}/stats`);
+                const data = await res.json();
+
+                if (data.success) {
+                    document.getElementById('statTotalUsers').textContent = data.stats.totalUsers;
+                    document.getElementById('statTodayRegistrations').textContent = data.stats.todayRegistrations;
+                    document.getElementById('statAvgQuality').textContent = data.stats.averageQuality + '%';
+                }
+            } catch (error) {
+                console.error('Failed to load stats:', error);
+            }
+        }
+
+        async function loadUsers() {
+            try {
+                const res = await fetch(`${API_BASE}/users`);
+                const data = await res.json();
+                const grid = document.getElementById('usersGrid');
+
+                if (data.users && data.users.length > 0) {
+                    grid.innerHTML = data.users.map(user => {
+                        const initials = user.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+                        const qualityClass = user.fingerprint_quality >= 70 ? 'quality-high' :
+                                            user.fingerprint_quality >= 50 ? 'quality-medium' : 'quality-low';
+
+                        return `
+                            <div class="user-card">
+                                <div class="user-avatar">${initials}</div>
+                                <div class="user-info">
+                                    <h3>${user.name}</h3>
+                                    <p>${user.department || user.employee_id || 'No department'}</p>
+                                </div>
+                                <span class="user-quality ${qualityClass}">${user.fingerprint_quality || 0}%</span>
+                            </div>
+                        `;
+                    }).join('');
+                } else {
+                    grid.innerHTML = `
+                        <div class="empty-state">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/>
+                                <circle cx="9" cy="7" r="4"/>
+                            </svg>
+                            <p>No users registered yet</p>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.error('Failed to load users:', error);
+            }
+        }
+
+        // ========== Check Scanner Status ==========
+        async function checkScannerStatus() {
+            try {
+                const res = await fetch(`${API_BASE}/scanner/status`);
+                const data = await res.json();
+                updateScannerStatus(data);
+            } catch (error) {
+                updateScannerStatus({ connected: false, error: 'Server unavailable' });
+            }
+        }
+
+        // ========== Initialize ==========
+        connectWebSocket();
+        checkScannerStatus();
+        setInterval(checkScannerStatus, 10000);
+    </script>
+</body>
+</html>

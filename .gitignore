@@ -1,0 +1,36 @@
+# Dependencies
+node_modules/
+
+# Database (will be created fresh on server)
+*.db
+
+# Environment variables
+.env
+.env.local
+.env.production
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Uploads (user-generated)
+uploads/*
+!uploads/.gitkeep
+
+# Claude Code
+.claude/
+
+# Build artifacts
+dist/
+build/
