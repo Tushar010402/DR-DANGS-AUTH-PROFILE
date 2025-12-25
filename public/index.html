@@ -1655,30 +1655,30 @@
 
                             <!-- Windows Instructions -->
                             <ol id="instructionsWindows" style="color: var(--text-secondary); padding-left: 20px; line-height: 2.2;">
-                                <li>Download the <a href="/downloads/fingerprint-service.zip" style="color: var(--primary-light); font-weight: 500;">Fingerprint Service</a></li>
+                                <li>Download <a href="/downloads/DrDangs-Fingerprint-Service.zip" style="color: var(--primary-light); font-weight: 500;">Fingerprint Service</a></li>
                                 <li>Extract the ZIP file</li>
-                                <li>Double-click <strong style="color: var(--success);">Start-Fingerprint-Service.bat</strong></li>
-                                <li>Keep the window open and refresh this page</li>
+                                <li>Open Command Prompt in that folder</li>
+                                <li>Run: <code style="background: var(--bg-dark); padding: 2px 8px; border-radius: 4px; font-size: 0.85rem;">npm install && npm start</code></li>
+                                <li>Keep the app running & refresh this page</li>
                             </ol>
 
                             <!-- Mac Instructions -->
                             <ol id="instructionsMac" style="color: var(--text-secondary); padding-left: 20px; line-height: 2.2; display: none;">
-                                <li>Download <a href="/downloads/fingerprint-app-source.zip" style="color: var(--primary-light); font-weight: 500;">Fingerprint Service App</a></li>
-                                <li>Extract and open Terminal in the folder</li>
+                                <li>Download <a href="/downloads/DrDangs-Fingerprint-Service.zip" style="color: var(--primary-light); font-weight: 500;">Fingerprint Service</a></li>
+                                <li>Extract the ZIP (double-click)</li>
+                                <li>Open Terminal in that folder</li>
                                 <li>Run: <code style="background: var(--bg-dark); padding: 2px 8px; border-radius: 4px; font-size: 0.85rem;">npm install && npm start</code></li>
-                                <li>The app will open - keep it running</li>
-                                <li>Refresh this page</li>
+                                <li>Keep the app running & refresh this page</li>
                             </ol>
-                            <p id="macNote" style="display: none; margin-top: 10px; font-size: 0.8rem; color: var(--text-muted);">
-                                For a signed DMG installer, build with: <code style="background: var(--bg-dark); padding: 2px 6px; border-radius: 4px;">npm run build:mac</code>
-                            </p>
+                            <p id="macNote" style="display: none; margin-top: 10px; font-size: 0.8rem; color: var(--text-muted);"></p>
 
                             <!-- Linux Instructions -->
                             <ol id="instructionsLinux" style="color: var(--text-secondary); padding-left: 20px; line-height: 2.2; display: none;">
-                                <li>Download the <a href="/downloads/fingerprint-service.zip" style="color: var(--primary-light); font-weight: 500;">Fingerprint Service</a></li>
+                                <li>Download <a href="/downloads/DrDangs-Fingerprint-Service.zip" style="color: var(--primary-light); font-weight: 500;">Fingerprint Service</a></li>
                                 <li>Extract the ZIP file</li>
-                                <li>Double-click <strong style="color: var(--success);">Start-Fingerprint-Service.command</strong></li>
-                                <li>Keep the terminal open and refresh this page</li>
+                                <li>Open Terminal in that folder</li>
+                                <li>Run: <code style="background: var(--bg-dark); padding: 2px 8px; border-radius: 4px; font-size: 0.85rem;">npm install && npm start</code></li>
+                                <li>Keep the app running & refresh this page</li>
                             </ol>
                         </div>
 
@@ -1742,7 +1742,7 @@
         }
 
         function downloadService() {
-            window.location.href = '/downloads/fingerprint-service.zip';
+            window.location.href = '/downloads/DrDangs-Fingerprint-Service.zip';
         }
 
         function showOSInstructions(os) {
