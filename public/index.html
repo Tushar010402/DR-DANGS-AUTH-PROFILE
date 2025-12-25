@@ -1117,13 +1117,24 @@
     <script>
         // ========== Configuration ==========
         const API_BASE = window.location.origin + '/api';
-        const WS_URL = `ws://${window.location.host}/ws`;
+        const LOCAL_SERVICE_URLS = [
+            'https://localhost:5050',
+            'http://localhost:5050',
+            'https://localhost:5000',
+            'http://localhost:5000'
+        ];
+        let LOCAL_SERVICE_URL = 'http://localhost:5050';
+        const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const WS_URL = `${wsProtocol}//${window.location.host}/ws`;
 
         // ========== State ==========
         let ws = null;
         let isConnected = false;
         let capturedTemplate = null;
         let capturedQuality = 0;
+        let localServiceAvailable = false;
+        let useLocalService = false;
+        let demoMode = true; // Enable demo mode by default for testing
 
         // ========== WebSocket ==========
         function connectWebSocket() {
@@ -1242,13 +1253,21 @@
             document.getElementById('scannerDot').classList.add('scanning');
 
             try {
-                const res = await fetch(`${API_BASE}/scanner/capture`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ timeout: 15000, minQuality: 40 })
-                });
+                let data;
+                const captureOptions = { timeout: 15000, minQuality: 40 };
 
-                const data = await res.json();
+                if (useLocalService) {
+                    // Use local fingerprint service
+                    data = await captureFromLocalService(captureOptions);
+                } else {
+                    // Use server API
+                    const res = await fetch(`${API_BASE}/scanner/capture`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(captureOptions)
+                    });
+                    data = await res.json();
+                }
 
                 area.classList.remove('scanning');
                 document.getElementById('scannerDot').classList.remove('scanning');
@@ -1489,8 +1508,64 @@
             }
         }
 
+        // ========== Local Service Detection ==========
+        async function checkLocalService() {
+            // Try each URL (HTTPS first, then HTTP)
+            for (const url of LOCAL_SERVICE_URLS) {
+                try {
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), 2000);
+
+                    const res = await fetch(`${url}/health`, {
+                        signal: controller.signal,
+                        mode: 'cors'
+                    });
+                    clearTimeout(timeoutId);
+
+                    if (res.ok) {
+                        const data = await res.json();
+                        LOCAL_SERVICE_URL = url;
+                        localServiceAvailable = true;
+                        useLocalService = true;
+                        console.log('[LOCAL] Fingerprint service detected at', url, ':', data);
+                        hideSetupBanner();
+                        return true;
+                    }
+                } catch (error) {
+                    console.log('[LOCAL] Cannot reach', url, '-', error.message);
+                }
+            }
+
+            localServiceAvailable = false;
+            useLocalService = false;
+            console.log('[LOCAL] Service not available on any URL, showing setup guide');
+            return false;
+        }
+
+        async function checkLocalScannerStatus() {
+            if (!useLocalService) return null;
+
+            try {
+                const res = await fetch(`${LOCAL_SERVICE_URL}/scanner/status`);
+                const data = await res.json();
+                return data;
+            } catch (error) {
+                return null;
+            }
+        }
+
         // ========== Check Scanner Status ==========
         async function checkScannerStatus() {
+            // First check local service
+            if (useLocalService) {
+                const localStatus = await checkLocalScannerStatus();
+                if (localStatus) {
+                    updateScannerStatus(localStatus);
+                    return;
+                }
+            }
+
+            // Fallback to server API
             try {
                 const res = await fetch(`${API_BASE}/scanner/status`);
                 const data = await res.json();
@@ -1500,10 +1575,275 @@
             }
         }
 
+        // ========== Setup Banner ==========
+        function showSetupBanner() {
+            if (document.getElementById('setupBanner')) return;
+
+            const banner = document.createElement('div');
+            banner.id = 'setupBanner';
+            banner.innerHTML = `
+                <div style="
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    right: 0;
+                    bottom: 0;
+                    background: rgba(15, 23, 42, 0.95);
+                    z-index: 9999;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    backdrop-filter: blur(10px);
+                ">
+                    <div style="
+                        background: var(--bg-card);
+                        border: 1px solid var(--border);
+                        border-radius: 20px;
+                        padding: 40px;
+                        max-width: 600px;
+                        width: 90%;
+                        box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
+                    ">
+                        <div style="text-align: center; margin-bottom: 30px;">
+                            <div style="
+                                width: 80px;
+                                height: 80px;
+                                background: linear-gradient(135deg, var(--warning) 0%, #d97706 100%);
+                                border-radius: 50%;
+                                display: flex;
+                                align-items: center;
+                                justify-content: center;
+                                margin: 0 auto 20px;
+                            ">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
+                                    <path d="M12 9v4m0 4h.01M5.07 19H19a2 2 0 001.75-2.75L13.75 4a2 2 0 00-3.5 0L3.25 16.25A2 2 0 005.07 19z"/>
+                                </svg>
+                            </div>
+                            <h2 style="font-size: 1.5rem; margin-bottom: 10px; color: var(--text-primary);">
+                                Fingerprint Scanner Setup Required
+                            </h2>
+                            <p style="color: var(--text-secondary); font-size: 0.95rem;">
+                                To use the fingerprint scanner, you need to install a small service on your computer.
+                            </p>
+                        </div>
+
+                        <div style="
+                            background: var(--bg-elevated);
+                            border-radius: 12px;
+                            padding: 20px;
+                            margin-bottom: 25px;
+                        ">
+                            <h3 style="font-size: 1rem; margin-bottom: 15px; color: var(--primary-light);">
+                                Quick Setup (One-time only)
+                            </h3>
+
+                            <!-- OS Tabs -->
+                            <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+                                <button onclick="showOSInstructions('windows')" id="tabWindows" style="
+                                    flex: 1; padding: 10px; border: 1px solid var(--border); background: var(--primary);
+                                    color: white; border-radius: 8px; cursor: pointer; font-weight: 500;
+                                ">Windows</button>
+                                <button onclick="showOSInstructions('mac')" id="tabMac" style="
+                                    flex: 1; padding: 10px; border: 1px solid var(--border); background: var(--bg-card);
+                                    color: var(--text-secondary); border-radius: 8px; cursor: pointer; font-weight: 500;
+                                ">macOS</button>
+                                <button onclick="showOSInstructions('linux')" id="tabLinux" style="
+                                    flex: 1; padding: 10px; border: 1px solid var(--border); background: var(--bg-card);
+                                    color: var(--text-secondary); border-radius: 8px; cursor: pointer; font-weight: 500;
+                                ">Linux</button>
+                            </div>
+
+                            <!-- Windows Instructions -->
+                            <ol id="instructionsWindows" style="color: var(--text-secondary); padding-left: 20px; line-height: 2.2;">
+                                <li>Download the <a href="/downloads/fingerprint-service.zip" style="color: var(--primary-light); font-weight: 500;">Fingerprint Service</a></li>
+                                <li>Extract the ZIP file</li>
+                                <li>Double-click <strong style="color: var(--success);">Start-Fingerprint-Service.bat</strong></li>
+                                <li>Keep the window open and refresh this page</li>
+                            </ol>
+
+                            <!-- Mac Instructions -->
+                            <ol id="instructionsMac" style="color: var(--text-secondary); padding-left: 20px; line-height: 2.2; display: none;">
+                                <li>Download <a href="/downloads/fingerprint-app-source.zip" style="color: var(--primary-light); font-weight: 500;">Fingerprint Service App</a></li>
+                                <li>Extract and open Terminal in the folder</li>
+                                <li>Run: <code style="background: var(--bg-dark); padding: 2px 8px; border-radius: 4px; font-size: 0.85rem;">npm install && npm start</code></li>
+                                <li>The app will open - keep it running</li>
+                                <li>Refresh this page</li>
+                            </ol>
+                            <p id="macNote" style="display: none; margin-top: 10px; font-size: 0.8rem; color: var(--text-muted);">
+                                For a signed DMG installer, build with: <code style="background: var(--bg-dark); padding: 2px 6px; border-radius: 4px;">npm run build:mac</code>
+                            </p>
+
+                            <!-- Linux Instructions -->
+                            <ol id="instructionsLinux" style="color: var(--text-secondary); padding-left: 20px; line-height: 2.2; display: none;">
+                                <li>Download the <a href="/downloads/fingerprint-service.zip" style="color: var(--primary-light); font-weight: 500;">Fingerprint Service</a></li>
+                                <li>Extract the ZIP file</li>
+                                <li>Double-click <strong style="color: var(--success);">Start-Fingerprint-Service.command</strong></li>
+                                <li>Keep the terminal open and refresh this page</li>
+                            </ol>
+                        </div>
+
+                        <div style="display: flex; gap: 15px; justify-content: center;">
+                            <button onclick="downloadService()" style="
+                                background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+                                color: white;
+                                border: none;
+                                padding: 14px 30px;
+                                border-radius: 10px;
+                                font-size: 1rem;
+                                font-weight: 600;
+                                cursor: pointer;
+                                display: flex;
+                                align-items: center;
+                                gap: 10px;
+                                transition: transform 0.2s, box-shadow 0.2s;
+                            " onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 10px 30px rgba(59,130,246,0.4)';"
+                               onmouseout="this.style.transform=''; this.style.boxShadow='';">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/>
+                                </svg>
+                                Download Service
+                            </button>
+                            <button onclick="retryConnection()" style="
+                                background: var(--bg-elevated);
+                                color: var(--text-primary);
+                                border: 1px solid var(--border);
+                                padding: 14px 30px;
+                                border-radius: 10px;
+                                font-size: 1rem;
+                                font-weight: 500;
+                                cursor: pointer;
+                                transition: background 0.2s;
+                            " onmouseover="this.style.background='var(--border)';"
+                               onmouseout="this.style.background='var(--bg-elevated)';">
+                                I've Installed It
+                            </button>
+                        </div>
+
+                        <p style="text-align: center; margin-top: 20px; color: var(--text-muted); font-size: 0.85rem;">
+                            The service runs silently in the background and auto-starts with Windows.
+                        </p>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(banner);
+
+            // Auto-detect OS and show relevant instructions
+            setTimeout(() => {
+                const detectedOS = detectOS();
+                showOSInstructions(detectedOS);
+            }, 100);
+        }
+
+        function hideSetupBanner() {
+            const banner = document.getElementById('setupBanner');
+            if (banner) {
+                banner.remove();
+            }
+        }
+
+        function downloadService() {
+            window.location.href = '/downloads/fingerprint-service.zip';
+        }
+
+        function showOSInstructions(os) {
+            // Hide all instructions
+            document.getElementById('instructionsWindows').style.display = 'none';
+            document.getElementById('instructionsMac').style.display = 'none';
+            document.getElementById('instructionsLinux').style.display = 'none';
+
+            // Reset all tabs
+            document.getElementById('tabWindows').style.background = 'var(--bg-card)';
+            document.getElementById('tabWindows').style.color = 'var(--text-secondary)';
+            document.getElementById('tabMac').style.background = 'var(--bg-card)';
+            document.getElementById('tabMac').style.color = 'var(--text-secondary)';
+            document.getElementById('tabLinux').style.background = 'var(--bg-card)';
+            document.getElementById('tabLinux').style.color = 'var(--text-secondary)';
+
+            // Hide mac note
+            const macNote = document.getElementById('macNote');
+            if (macNote) macNote.style.display = 'none';
+
+            // Show selected and activate tab
+            if (os === 'windows') {
+                document.getElementById('instructionsWindows').style.display = 'block';
+                document.getElementById('tabWindows').style.background = 'var(--primary)';
+                document.getElementById('tabWindows').style.color = 'white';
+            } else if (os === 'mac') {
+                document.getElementById('instructionsMac').style.display = 'block';
+                document.getElementById('tabMac').style.background = 'var(--primary)';
+                document.getElementById('tabMac').style.color = 'white';
+                if (macNote) macNote.style.display = 'block';
+            } else if (os === 'linux') {
+                document.getElementById('instructionsLinux').style.display = 'block';
+                document.getElementById('tabLinux').style.background = 'var(--primary)';
+                document.getElementById('tabLinux').style.color = 'white';
+            }
+        }
+
+        function detectOS() {
+            const platform = navigator.platform.toLowerCase();
+            const userAgent = navigator.userAgent.toLowerCase();
+
+            if (platform.includes('mac') || userAgent.includes('mac')) {
+                return 'mac';
+            } else if (platform.includes('linux') || userAgent.includes('linux')) {
+                return 'linux';
+            }
+            return 'windows';
+        }
+
+        async function retryConnection() {
+            const btn = event.target;
+            btn.textContent = 'Checking...';
+            btn.disabled = true;
+
+            const found = await checkLocalService();
+
+            if (found) {
+                hideSetupBanner();
+                checkScannerStatus();
+                showMessage('reg', 'Fingerprint service connected!', 'success');
+            } else {
+                btn.textContent = 'I\'ve Installed It';
+                btn.disabled = false;
+                alert('Service not detected. Please make sure:\n\n1. You ran setup.bat as Administrator\n2. The installation completed successfully\n3. Try restarting your computer');
+            }
+        }
+
+        // ========== Modified Capture Function ==========
+        async function captureFromLocalService(options) {
+            const res = await fetch(`${LOCAL_SERVICE_URL}/scanner/capture`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(options)
+            });
+            return await res.json();
+        }
+
         // ========== Initialize ==========
-        connectWebSocket();
-        checkScannerStatus();
-        setInterval(checkScannerStatus, 10000);
+        async function initialize() {
+            connectWebSocket();
+
+            // Check for local service first
+            const hasLocalService = await checkLocalService();
+
+            if (!hasLocalService) {
+                // Show setup banner if no local service
+                showSetupBanner();
+            }
+
+            checkScannerStatus();
+            setInterval(checkScannerStatus, 10000);
+
+            // Periodically check for local service
+            setInterval(async () => {
+                if (!localServiceAvailable) {
+                    await checkLocalService();
+                }
+            }, 5000);
+        }
+
+        initialize();
     </script>
 </body>
 </html>

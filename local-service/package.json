@@ -1,0 +1,26 @@
+{
+  "name": "drdangs-fingerprint-service",
+  "version": "1.0.0",
+  "description": "Dr. Dangs Fingerprint Scanner Service",
+  "main": "service.js",
+  "bin": "service.js",
+  "scripts": {
+    "start": "node service.js",
+    "build": "pkg . --targets node18-macos-x64,node18-win-x64 --output dist/FingerprintService"
+  },
+  "pkg": {
+    "assets": [
+      "certs/**/*"
+    ],
+    "outputPath": "dist"
+  },
+  "author": "Dr. Dangs Lab",
+  "license": "MIT",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.18.2"
+  },
+  "devDependencies": {
+    "pkg": "^5.8.1"
+  }
+}
