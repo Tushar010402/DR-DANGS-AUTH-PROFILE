@@ -449,6 +449,41 @@
       color: var(--success);
     }
 
+    .finger-btn.selected {
+      border-color: var(--primary);
+      background: #eff6ff;
+      color: var(--primary);
+    }
+
+    .finger-btn.capturing {
+      border-color: var(--warning);
+      background: #fffbeb;
+      color: #92400e;
+      animation: pulse-border 1s infinite;
+    }
+
+    @keyframes pulse-border {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.4); }
+      50% { box-shadow: 0 0 0 4px rgba(245, 158, 11, 0.2); }
+    }
+
+    .enrolled-finger-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 4px 10px;
+      background: #ecfdf5;
+      border: 1px solid var(--success);
+      border-radius: 12px;
+      font-size: 0.75rem;
+      color: var(--success);
+    }
+
+    .enrolled-finger-badge svg {
+      width: 12px;
+      height: 12px;
+    }
+
     .finger-icon {
       font-size: 1.2rem;
       margin-bottom: 4px;
@@ -991,9 +1026,22 @@
           <p class="page-subtitle">Register new patients with multiple fingerprints for maximum accuracy</p>
         </div>
 
+        <div class="industrial-grade">
+          <div class="industrial-grade-icon">
+            <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor">
+              <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z"/>
+            </svg>
+          </div>
+          <div class="industrial-grade-text">
+            <h4>Multi-Finger Enrollment for Maximum Security</h4>
+            <p>Enroll at least 2 fingers for redundancy | 70% minimum quality required</p>
+          </div>
+        </div>
+
         <div class="card">
           <div class="card-header">
             <span class="card-title">New Patient Enrollment</span>
+            <span id="enrollProgress" style="font-size: 0.85rem; color: var(--gray-500);">Step 1 of 3</span>
           </div>
           <div class="card-body">
             <div class="scanner-section">
@@ -1011,29 +1059,136 @@
                   <input type="text" class="form-input" id="enrollPatientPhone" placeholder="Enter phone number">
                 </div>
 
-                <p style="margin: 20px 0 12px; font-weight: 600; color: var(--gray-700);">Enroll Fingers (minimum 2 recommended)</p>
+                <p style="margin: 20px 0 12px; font-weight: 600; color: var(--gray-700);">Select Fingers to Enroll (minimum 2)</p>
                 <div class="finger-selector" id="enrollFingerSelector">
-                  <!-- Same finger buttons -->
+                  <button class="finger-btn" data-finger="0" onclick="toggleEnrollFinger(this)">
+                    <div class="finger-icon">👆</div>
+                    <span>L.Thumb</span>
+                  </button>
+                  <button class="finger-btn selected" data-finger="1" onclick="toggleEnrollFinger(this)">
+                    <div class="finger-icon">👆</div>
+                    <span>L.Index</span>
+                  </button>
+                  <button class="finger-btn" data-finger="2" onclick="toggleEnrollFinger(this)">
+                    <div class="finger-icon">👆</div>
+                    <span>L.Middle</span>
+                  </button>
+                  <button class="finger-btn" data-finger="3" onclick="toggleEnrollFinger(this)">
+                    <div class="finger-icon">👆</div>
+                    <span>L.Ring</span>
+                  </button>
+                  <button class="finger-btn" data-finger="4" onclick="toggleEnrollFinger(this)">
+                    <div class="finger-icon">👆</div>
+                    <span>L.Little</span>
+                  </button>
+                  <button class="finger-btn" data-finger="5" onclick="toggleEnrollFinger(this)">
+                    <div class="finger-icon">👆</div>
+                    <span>R.Thumb</span>
+                  </button>
+                  <button class="finger-btn selected" data-finger="6" onclick="toggleEnrollFinger(this)">
+                    <div class="finger-icon">👆</div>
+                    <span>R.Index</span>
+                  </button>
+                  <button class="finger-btn" data-finger="7" onclick="toggleEnrollFinger(this)">
+                    <div class="finger-icon">👆</div>
+                    <span>R.Middle</span>
+                  </button>
+                  <button class="finger-btn" data-finger="8" onclick="toggleEnrollFinger(this)">
+                    <div class="finger-icon">👆</div>
+                    <span>R.Ring</span>
+                  </button>
+                  <button class="finger-btn" data-finger="9" onclick="toggleEnrollFinger(this)">
+                    <div class="finger-icon">👆</div>
+                    <span>R.Little</span>
+                  </button>
+                </div>
+
+                <div id="enrolledFingersList" style="margin-top: 16px; padding: 12px; background: var(--gray-50); border-radius: 8px; display: none;">
+                  <p style="font-size: 0.8rem; color: var(--gray-600); margin-bottom: 8px;">Enrolled Fingers:</p>
+                  <div id="enrolledFingersDisplay" style="display: flex; flex-wrap: wrap; gap: 6px;"></div>
                 </div>
 
                 <div class="action-buttons" style="margin-top: 24px;">
-                  <button class="btn btn-primary" onclick="startEnrollment()">
+                  <button class="btn btn-primary" id="startEnrollBtn" onclick="startMultiFingerEnrollment()">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
                       <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
                     </svg>
-                    Start Enrollment Process
+                    Start Multi-Finger Enrollment
+                  </button>
+                  <button class="btn btn-secondary" id="retryEnrollBtn" onclick="retryCurrentFinger()" style="display: none;">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/>
+                    </svg>
+                    Retry This Finger
                   </button>
                 </div>
               </div>
 
               <div class="fingerprint-capture-area" id="enrollCaptureArea">
-                <div class="fingerprint-icon">
+                <div class="fingerprint-icon" id="enrollFingerIcon">
                   <svg viewBox="0 0 24 24" fill="currentColor">
                     <path d="M17.81 4.47c-.08 0-.16-.02-.23-.06C15.66 3.42 14 3 12.01 3c-1.98 0-3.86.47-5.57 1.41-.24.13-.54.04-.68-.2-.13-.24-.04-.55.2-.68C7.82 2.52 9.86 2 12.01 2c2.13 0 3.99.47 6.03 1.52.25.13.34.43.21.67-.09.18-.26.28-.44.28z"/>
                   </svg>
                 </div>
-                <p class="capture-text">Enrollment Ready</p>
-                <p class="capture-subtext">Enter patient details and start enrollment</p>
+                <div class="fingerprint-image-container" id="enrollImageContainer" style="display: none;">
+                  <canvas id="enrollCanvas" width="180" height="210"></canvas>
+                </div>
+                <p class="capture-text" id="enrollCaptureText">Ready for Enrollment</p>
+                <p class="capture-subtext" id="enrollCaptureSubtext">Select fingers and click Start to begin</p>
+
+                <div class="quality-meter" id="enrollQualityMeter" style="display: none;">
+                  <div class="quality-header">
+                    <span class="quality-label">Capture Quality</span>
+                    <span class="quality-value" id="enrollQualityValue">0%</span>
+                  </div>
+                  <div class="quality-bar">
+                    <div class="quality-fill" id="enrollQualityFill" style="width: 0%"></div>
+                  </div>
+                  <div class="quality-thresholds">
+                    <span>Poor</span>
+                    <span>Fair</span>
+                    <span>Good</span>
+                    <span>Excellent</span>
+                  </div>
+                </div>
+
+                <div class="accuracy-badge" id="enrollAccuracyBadge" style="display: none;">
+                  <svg viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                  </svg>
+                  <span id="enrollAccuracyText">Industrial Grade Enrolled</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Enrollment Summary Card -->
+        <div class="card" id="enrollSummaryCard" style="display: none;">
+          <div class="card-header">
+            <span class="card-title">Enrollment Summary</span>
+          </div>
+          <div class="card-body">
+            <div class="results-panel" style="display: block;">
+              <div class="result-item">
+                <span class="result-label">Patient ID</span>
+                <span class="result-value" id="summaryPatientId">-</span>
+              </div>
+              <div class="result-item">
+                <span class="result-label">Patient Name</span>
+                <span class="result-value" id="summaryPatientName">-</span>
+              </div>
+              <div class="result-item">
+                <span class="result-label">Fingers Enrolled</span>
+                <span class="result-value" id="summaryFingersCount">0</span>
+              </div>
+              <div class="result-item">
+                <span class="result-label">Average Quality</span>
+                <span class="result-value" id="summaryAvgQuality">-</span>
+              </div>
+              <div class="result-item">
+                <span class="result-label">Status</span>
+                <span class="result-value match" id="summaryStatus">Enrollment Complete</span>
               </div>
             </div>
           </div>
@@ -1602,41 +1757,6 @@
       `;
     }
 
-    // Start enrollment process
-    async function startEnrollment() {
-      const patientId = document.getElementById('enrollPatientId').value.trim();
-      if (!patientId) {
-        showToast('Missing Information', 'Please enter a Patient ID', 'warning');
-        return;
-      }
-
-      showToast('Starting Enrollment', 'Place your finger on the scanner', 'info');
-
-      try {
-        const response = await fetch(`${API_BASE}/scanner/enroll`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            patientId,
-            fingerIndex: selectedFinger,
-            timeout: 15000,
-            minQuality: enrollQuality,
-            securityLevel: securityLevel
-          })
-        });
-
-        const result = await response.json();
-
-        if (result.success) {
-          showToast('Enrollment Complete', `Patient ${patientId} enrolled successfully`, 'success');
-        } else {
-          throw new Error(result.error);
-        }
-      } catch (err) {
-        showToast('Enrollment Failed', err.message, 'error');
-      }
-    }
-
     // Start verification process
     async function startVerification() {
       const mode = document.getElementById('verifyMode').value;
@@ -1723,6 +1843,410 @@
         }
       } catch (err) {
         showToast('Error', err.message, 'error');
+      }
+    }
+
+    // ============================================
+    // Multi-Finger Enrollment Functions
+    // ============================================
+
+    const fingerNames = ['L.Thumb', 'L.Index', 'L.Middle', 'L.Ring', 'L.Little',
+                         'R.Thumb', 'R.Index', 'R.Middle', 'R.Ring', 'R.Little'];
+    let selectedEnrollFingers = [1, 6]; // Default: Left Index, Right Index
+    let enrolledFingersData = [];
+    let currentEnrollIndex = 0;
+    let enrollmentInProgress = false;
+    let maxRetries = 3;
+    let currentRetryCount = 0;
+
+    // Toggle finger selection for enrollment
+    function toggleEnrollFinger(btn) {
+      if (enrollmentInProgress) return;
+
+      const finger = parseInt(btn.dataset.finger);
+      const idx = selectedEnrollFingers.indexOf(finger);
+
+      if (idx > -1) {
+        selectedEnrollFingers.splice(idx, 1);
+        btn.classList.remove('selected');
+      } else {
+        selectedEnrollFingers.push(finger);
+        btn.classList.add('selected');
+      }
+
+      // Update progress display
+      updateEnrollProgress();
+    }
+
+    function updateEnrollProgress() {
+      const total = selectedEnrollFingers.length;
+      const enrolled = enrolledFingersData.length;
+      document.getElementById('enrollProgress').textContent =
+        `${enrolled} of ${total} fingers enrolled`;
+    }
+
+    // Start multi-finger enrollment
+    async function startMultiFingerEnrollment() {
+      const patientId = document.getElementById('enrollPatientId').value.trim();
+      const patientName = document.getElementById('enrollPatientName').value.trim();
+
+      if (!patientId) {
+        showToast('Missing Information', 'Please enter a Patient ID', 'warning');
+        return;
+      }
+
+      if (selectedEnrollFingers.length < 2) {
+        showToast('Insufficient Fingers', 'Please select at least 2 fingers for enrollment', 'warning');
+        return;
+      }
+
+      // Reset enrollment state
+      enrolledFingersData = [];
+      currentEnrollIndex = 0;
+      currentRetryCount = 0;
+      enrollmentInProgress = true;
+
+      // Update UI
+      document.getElementById('startEnrollBtn').disabled = true;
+      document.getElementById('startEnrollBtn').innerHTML = '<div class="spinner"></div> Enrolling...';
+      document.getElementById('enrollSummaryCard').style.display = 'none';
+      document.getElementById('enrolledFingersList').style.display = 'none';
+
+      // Sort fingers for consistent order
+      selectedEnrollFingers.sort((a, b) => a - b);
+
+      // Start enrolling first finger
+      await enrollNextFinger();
+    }
+
+    async function enrollNextFinger() {
+      if (currentEnrollIndex >= selectedEnrollFingers.length) {
+        // All fingers enrolled - show summary
+        completeEnrollment();
+        return;
+      }
+
+      const fingerIndex = selectedEnrollFingers[currentEnrollIndex];
+      const fingerName = fingerNames[fingerIndex];
+
+      // Update UI to show current finger
+      updateEnrollProgress();
+      document.getElementById('enrollCaptureText').textContent = `Enrolling ${fingerName}`;
+      document.getElementById('enrollCaptureSubtext').textContent = 'Place your finger firmly on the scanner';
+      document.getElementById('enrollCaptureArea').className = 'fingerprint-capture-area active';
+      document.getElementById('enrollFingerIcon').style.display = 'block';
+      document.getElementById('enrollImageContainer').style.display = 'none';
+      document.getElementById('enrollQualityMeter').style.display = 'none';
+      document.getElementById('retryEnrollBtn').style.display = 'none';
+
+      // Highlight current finger in selector
+      document.querySelectorAll('#enrollFingerSelector .finger-btn').forEach(btn => {
+        btn.classList.remove('capturing');
+        if (parseInt(btn.dataset.finger) === fingerIndex) {
+          btn.classList.add('capturing');
+        }
+      });
+
+      showToast('Capture Required', `Place your ${fingerName} on the scanner`, 'info');
+
+      try {
+        const patientId = document.getElementById('enrollPatientId').value.trim();
+
+        const response = await fetch(`${API_BASE}/scanner/enroll`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            patientId,
+            fingerIndex,
+            timeout: 15000,
+            minQuality: enrollQuality,
+            securityLevel: securityLevel
+          })
+        });
+
+        const result = await response.json();
+
+        if (result.success && result.capture) {
+          const quality = result.capture.quality || 0;
+
+          // Update quality display
+          updateEnrollQuality(quality);
+
+          if (quality >= enrollQuality) {
+            // Successful enrollment
+            enrolledFingersData.push({
+              fingerIndex,
+              fingerName,
+              quality,
+              timestamp: Date.now()
+            });
+
+            // Mark finger as enrolled in UI
+            document.querySelectorAll('#enrollFingerSelector .finger-btn').forEach(btn => {
+              if (parseInt(btn.dataset.finger) === fingerIndex) {
+                btn.classList.remove('capturing', 'selected');
+                btn.classList.add('enrolled');
+              }
+            });
+
+            // Show success
+            document.getElementById('enrollCaptureArea').className = 'fingerprint-capture-area success';
+            document.getElementById('enrollCaptureText').textContent = `${fingerName} Enrolled`;
+            document.getElementById('enrollCaptureSubtext').textContent = `Quality: ${quality}%`;
+            document.getElementById('enrollAccuracyBadge').style.display = 'flex';
+            document.getElementById('enrollAccuracyText').textContent = quality >= 80 ? 'Excellent Quality' : 'Good Quality';
+
+            // Draw captured image if available
+            if (result.capture.image) {
+              drawEnrollFingerprint(result.capture.image, result.capture.width, result.capture.height);
+            }
+
+            // Update enrolled fingers display
+            updateEnrolledFingersDisplay();
+
+            showToast('Finger Enrolled', `${fingerName} enrolled successfully (${quality}%)`, 'success');
+
+            currentRetryCount = 0;
+            currentEnrollIndex++;
+
+            // Wait a moment then continue to next finger
+            setTimeout(() => {
+              enrollNextFinger();
+            }, 1500);
+
+          } else {
+            // Quality too low - offer retry
+            handleEnrollmentRetry(fingerName, quality, 'Quality too low');
+          }
+
+        } else {
+          // Capture failed
+          handleEnrollmentRetry(fingerName, 0, result.error || 'Capture failed');
+        }
+
+      } catch (err) {
+        handleEnrollmentRetry(fingerNames[fingerIndex], 0, err.message);
+      }
+    }
+
+    function handleEnrollmentRetry(fingerName, quality, reason) {
+      currentRetryCount++;
+
+      if (currentRetryCount >= maxRetries) {
+        // Max retries exceeded - skip this finger
+        showToast('Enrollment Failed', `Could not enroll ${fingerName} after ${maxRetries} attempts. Skipping.`, 'error');
+        currentRetryCount = 0;
+        currentEnrollIndex++;
+        setTimeout(() => enrollNextFinger(), 1000);
+        return;
+      }
+
+      // Offer retry
+      document.getElementById('enrollCaptureArea').className = 'fingerprint-capture-area error';
+      document.getElementById('enrollCaptureText').textContent = `Retry Required (${currentRetryCount}/${maxRetries})`;
+      document.getElementById('enrollCaptureSubtext').textContent = reason;
+      document.getElementById('retryEnrollBtn').style.display = 'block';
+      document.getElementById('enrollAccuracyBadge').style.display = 'none';
+
+      if (quality > 0) {
+        updateEnrollQuality(quality);
+      }
+
+      showToast('Retry Needed', `${reason} - Please try again`, 'warning');
+    }
+
+    function retryCurrentFinger() {
+      document.getElementById('retryEnrollBtn').style.display = 'none';
+      enrollNextFinger();
+    }
+
+    function updateEnrollQuality(quality) {
+      const meter = document.getElementById('enrollQualityMeter');
+      const fill = document.getElementById('enrollQualityFill');
+      const value = document.getElementById('enrollQualityValue');
+
+      meter.style.display = 'block';
+      fill.style.width = `${quality}%`;
+      value.textContent = `${quality}%`;
+
+      let level;
+      if (quality >= 80) level = 'excellent';
+      else if (quality >= 60) level = 'good';
+      else if (quality >= 40) level = 'fair';
+      else level = 'poor';
+
+      fill.className = `quality-fill ${level}`;
+      value.className = `quality-value ${level}`;
+    }
+
+    function drawEnrollFingerprint(imageBase64, width, height) {
+      const canvas = document.getElementById('enrollCanvas');
+      const ctx = canvas.getContext('2d');
+
+      try {
+        const imageData = atob(imageBase64);
+        const imgData = ctx.createImageData(width, height);
+
+        for (let i = 0; i < imageData.length && i < width * height; i++) {
+          const pixel = imageData.charCodeAt(i);
+          const idx = i * 4;
+          imgData.data[idx] = pixel;
+          imgData.data[idx + 1] = pixel;
+          imgData.data[idx + 2] = pixel;
+          imgData.data[idx + 3] = 255;
+        }
+
+        const tempCanvas = document.createElement('canvas');
+        tempCanvas.width = width;
+        tempCanvas.height = height;
+        tempCanvas.getContext('2d').putImageData(imgData, 0, 0);
+
+        ctx.drawImage(tempCanvas, 0, 0, width, height, 0, 0, canvas.width, canvas.height);
+
+        document.getElementById('enrollFingerIcon').style.display = 'none';
+        document.getElementById('enrollImageContainer').style.display = 'block';
+      } catch (e) {
+        console.error('Error drawing fingerprint:', e);
+      }
+    }
+
+    function updateEnrolledFingersDisplay() {
+      const container = document.getElementById('enrolledFingersDisplay');
+      const list = document.getElementById('enrolledFingersList');
+
+      if (enrolledFingersData.length > 0) {
+        list.style.display = 'block';
+        container.innerHTML = enrolledFingersData.map(f => `
+          <span class="enrolled-finger-badge">
+            <svg viewBox="0 0 24 24" fill="currentColor">
+              <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
+            </svg>
+            ${f.fingerName} (${f.quality}%)
+          </span>
+        `).join('');
+      }
+    }
+
+    function completeEnrollment() {
+      enrollmentInProgress = false;
+
+      // Reset button
+      document.getElementById('startEnrollBtn').disabled = false;
+      document.getElementById('startEnrollBtn').innerHTML = `
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
+        </svg>
+        Start Multi-Finger Enrollment
+      `;
+
+      // Remove capturing class from all buttons
+      document.querySelectorAll('#enrollFingerSelector .finger-btn').forEach(btn => {
+        btn.classList.remove('capturing');
+      });
+
+      const patientId = document.getElementById('enrollPatientId').value.trim();
+      const patientName = document.getElementById('enrollPatientName').value.trim();
+
+      if (enrolledFingersData.length === 0) {
+        showToast('Enrollment Failed', 'No fingers were enrolled successfully', 'error');
+        document.getElementById('enrollCaptureArea').className = 'fingerprint-capture-area error';
+        document.getElementById('enrollCaptureText').textContent = 'Enrollment Failed';
+        document.getElementById('enrollCaptureSubtext').textContent = 'No fingers enrolled';
+        return;
+      }
+
+      // Calculate average quality
+      const avgQuality = Math.round(
+        enrolledFingersData.reduce((sum, f) => sum + f.quality, 0) / enrolledFingersData.length
+      );
+
+      // Show summary
+      document.getElementById('enrollSummaryCard').style.display = 'block';
+      document.getElementById('summaryPatientId').textContent = patientId;
+      document.getElementById('summaryPatientName').textContent = patientName || '-';
+      document.getElementById('summaryFingersCount').textContent = `${enrolledFingersData.length} fingers`;
+      document.getElementById('summaryAvgQuality').textContent = `${avgQuality}%`;
+      document.getElementById('summaryStatus').textContent =
+        enrolledFingersData.length >= 2 ? 'Enrollment Complete' : 'Partial Enrollment';
+      document.getElementById('summaryStatus').className =
+        enrolledFingersData.length >= 2 ? 'result-value match' : 'result-value no-match';
+
+      // Update capture area
+      document.getElementById('enrollCaptureArea').className = 'fingerprint-capture-area success';
+      document.getElementById('enrollCaptureText').textContent = 'Enrollment Complete';
+      document.getElementById('enrollCaptureSubtext').textContent =
+        `${enrolledFingersData.length} fingers enrolled with ${avgQuality}% average quality`;
+      document.getElementById('enrollAccuracyBadge').style.display = 'flex';
+      document.getElementById('enrollAccuracyText').textContent =
+        avgQuality >= 80 ? 'Industrial Grade Complete' : 'Enrollment Complete';
+
+      showToast('Enrollment Complete',
+        `Successfully enrolled ${enrolledFingersData.length} fingers for ${patientId}`,
+        'success');
+    }
+
+    // ============================================
+    // Capture with Retry Functions
+    // ============================================
+
+    let captureRetryCount = 0;
+    const maxCaptureRetries = 3;
+
+    async function captureWithRetry(options = {}) {
+      captureRetryCount = 0;
+      return await attemptCapture(options);
+    }
+
+    async function attemptCapture(options) {
+      try {
+        const response = await fetch(`${API_BASE}/scanner/capture`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            timeout: options.timeout || 15000,
+            minQuality: options.minQuality || minQuality
+          })
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+          if (result.quality >= (options.minQuality || minQuality)) {
+            return result;
+          } else if (captureRetryCount < maxCaptureRetries) {
+            captureRetryCount++;
+            showToast('Quality Too Low',
+              `Quality ${result.quality}% below threshold. Retry ${captureRetryCount}/${maxCaptureRetries}`,
+              'warning');
+            await new Promise(r => setTimeout(r, 500));
+            return await attemptCapture(options);
+          } else {
+            return {
+              success: false,
+              error: `Quality too low after ${maxCaptureRetries} attempts. Best: ${result.quality}%`
+            };
+          }
+        } else {
+          if (captureRetryCount < maxCaptureRetries) {
+            captureRetryCount++;
+            showToast('Capture Failed',
+              `${result.error || 'Unknown error'}. Retry ${captureRetryCount}/${maxCaptureRetries}`,
+              'warning');
+            await new Promise(r => setTimeout(r, 1000));
+            return await attemptCapture(options);
+          }
+          return result;
+        }
+      } catch (err) {
+        if (captureRetryCount < maxCaptureRetries) {
+          captureRetryCount++;
+          showToast('Connection Error',
+            `${err.message}. Retry ${captureRetryCount}/${maxCaptureRetries}`,
+            'warning');
+          await new Promise(r => setTimeout(r, 1000));
+          return await attemptCapture(options);
+        }
+        throw err;
       }
     }
   </script>
