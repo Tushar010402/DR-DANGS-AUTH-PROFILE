@@ -1,144 +1,101 @@
 /**
  * SecuGen Fingerprint Scanner Module for Windows
- * Uses SecuGen FDx SDK Pro via FFI
+ * SDK-FREE Version - Captures raw fingerprint images via USB
+ * Sends raw images to server for processing (server has the SDK)
  *
- * Requirements:
- * - SecuGen FDx SDK Pro installed (Windows only)
- * - sgfplib.dll in system32 or app directory
+ * Architecture:
+ * - Local app: Captures raw USB data from scanner
+ * - Server: Has SecuGen SDK for template generation & matching
  */
 
-const path = require('path');
-const crypto = require('crypto');
 const os = require('os');
 
-// Check if we're on Windows
-const isWindows = os.platform() === 'win32';
+// SecuGen Hamster Pro USB identifiers
+const SECUGEN_VENDOR_ID = 0x1162;
+const SECUGEN_PRODUCT_ID = 0x2200;
 
-// SecuGen constants
-const CYCACHE_CONSTANTS = {
-  // Device IDs
-  SG_DEV_FDU02: 0x03,
-  SG_DEV_FDU03: 0x04,
-  SG_DEV_FDU04: 0x05,
-  SG_DEV_FDU05: 0x06,
-  SG_DEV_FDU06: 0x07,
-  SG_DEV_FDU07: 0x08,
-  SG_DEV_FDU07A: 0x09,
-  SG_DEV_HAMSTER_PRO: 0x0A,
-  SG_DEV_HAMSTER_PRO_20: 0x0B,
-  SG_DEV_AUTO: 0xFF,
-
-  // Error codes
-  CYCACHE_ERROR_NONE: 0,
-  CYCACHE_ERROR_CREATION_FAILED: 1,
-  CYCACHE_ERROR_FUNCTION_FAILED: 2,
-  CYCACHE_ERROR_INVALID_PARAM: 3,
-  CYCACHE_ERROR_NOT_USED: 4,
-  CYCACHE_ERROR_DLLLOAD_FAILED: 5,
-  CYCACHE_ERROR_DLLLOAD_FAILED_DRV: 6,
-  CYCACHE_ERROR_DLLLOAD_FAILED_ALGO: 7,
-  CYCACHE_ERROR_SYSLOAD_FAILED: 8,
-
-  // Image dimensions for Hamster Pro 20
-  IMAGE_WIDTH: 260,
-  IMAGE_HEIGHT: 300,
-  IMAGE_DPI: 500
-};
+// Image dimensions for Hamster Pro 20
+const IMAGE_WIDTH = 260;
+const IMAGE_HEIGHT = 300;
+const IMAGE_SIZE = IMAGE_WIDTH * IMAGE_HEIGHT;
 
 class FingerprintScannerWindows {
   constructor() {
     this.isConnected = false;
     this.isCapturing = false;
     this.deviceInfo = null;
-    this.sgfplib = null;
-    this.hDevice = null;
-    this.imageWidth = CYCACHE_CONSTANTS.IMAGE_WIDTH;
-    this.imageHeight = CYCACHE_CONSTANTS.IMAGE_HEIGHT;
+    this.device = null;
+    this.usbLib = null;
+    this.serverUrl = 'http://localhost:3001'; // Backend server with SDK
 
-    // Try to load SecuGen SDK
-    this.loadSDK();
+    // Try to load USB library
+    this.loadUSBLibrary();
   }
 
   /**
-   * Load SecuGen SDK DLL
+   * Load USB library for direct device communication
    */
-  loadSDK() {
-    if (!isWindows) {
-      console.log('[FINGERPRINT] Not on Windows - using simulation mode');
-      return;
-    }
-
+  loadUSBLibrary() {
     try {
-      // Try to load using ffi-napi
-      const ffi = require('ffi-napi');
-      const ref = require('ref-napi');
-
-      // Define types
-      const DWORD = ref.types.uint32;
-      const LPVOID = ref.refType(ref.types.void);
-      const LPBYTE = ref.refType(ref.types.byte);
-      const LPDWORD = ref.refType(DWORD);
-
-      // Load the SecuGen DLL
-      const dllPaths = [
-        'sgfplib.dll',
-        'C:\\Program Files\\SecuGen\\FDx SDK Pro for Windows\\bin\\x64\\sgfplib.dll',
-        'C:\\Program Files (x86)\\SecuGen\\FDx SDK Pro for Windows\\bin\\win32\\sgfplib.dll',
-        path.join(__dirname, 'sdk', 'sgfplib.dll')
-      ];
-
-      for (const dllPath of dllPaths) {
-        try {
-          this.sgfplib = ffi.Library(dllPath, {
-            'CYCACHE_Create': [DWORD, [LPVOID]],
-            'CYCACHE_Close': [DWORD, [LPVOID]],
-            'CYCACHE_Init': [DWORD, [LPVOID, DWORD]],
-            'CYCACHE_OpenDevice': [DWORD, [LPVOID, DWORD]],
-            'CYCACHE_CloseDevice': [DWORD, [LPVOID]],
-            'CYCACHE_GetDeviceInfo': [DWORD, [LPVOID, LPVOID]],
-            'CYCACHE_GetImage': [DWORD, [LPVOID, LPBYTE]],
-            'CYCACHE_GetImageEx': [DWORD, [LPVOID, LPBYTE, DWORD, LPVOID, DWORD]],
-            'CYCACHE_GetImageQuality': [DWORD, [LPVOID, DWORD, DWORD, LPBYTE, LPDWORD]],
-            'CYCACHE_CreateTemplate': [DWORD, [LPVOID, LPVOID, LPBYTE, LPBYTE]],
-            'CYCACHE_MatchTemplate': [DWORD, [LPVOID, LPBYTE, LPBYTE, DWORD, LPDWORD]],
-            'CYCACHE_SetLedOn': [DWORD, [LPVOID, 'bool']],
-            'CYCACHE_SetBrightness': [DWORD, [LPVOID, DWORD]]
-          });
-          console.log('[FINGERPRINT] SecuGen SDK loaded from:', dllPath);
-          break;
-        } catch (e) {
-          continue;
-        }
-      }
-
-      if (!this.sgfplib) {
-        console.log('[FINGERPRINT] SecuGen SDK not found - using simulation mode');
-      }
+      this.usbLib = require('usb');
+      console.log('[FINGERPRINT] USB library loaded successfully');
     } catch (e) {
-      console.log('[FINGERPRINT] Failed to load SecuGen SDK:', e.message);
-      console.log('[FINGERPRINT] Using simulation mode');
+      console.log('[FINGERPRINT] USB library not available:', e.message);
+      this.usbLib = null;
     }
+  }
+
+  /**
+   * Set the backend server URL
+   */
+  setServerUrl(url) {
+    this.serverUrl = url;
+    console.log('[FINGERPRINT] Server URL set to:', url);
   }
 
   /**
    * Get scanner status
    */
   getStatus() {
+    // Check if scanner is physically connected
+    let scannerDetected = false;
+    let deviceDetails = null;
+
+    if (this.usbLib) {
+      try {
+        const device = this.usbLib.findByIds(SECUGEN_VENDOR_ID, SECUGEN_PRODUCT_ID);
+        if (device) {
+          scannerDetected = true;
+          deviceDetails = {
+            vendorId: `0x${SECUGEN_VENDOR_ID.toString(16)}`,
+            productId: `0x${SECUGEN_PRODUCT_ID.toString(16)}`,
+            bus: device.busNumber,
+            address: device.deviceAddress
+          };
+        }
+      } catch (e) {
+        console.log('[FINGERPRINT] USB detection error:', e.message);
+      }
+    }
+
     return {
       connected: this.isConnected,
       capturing: this.isCapturing,
       deviceInfo: this.deviceInfo,
-      usbAvailable: true,
-      sdkAvailable: !!this.sgfplib,
+      scannerDetected: scannerDetected,
+      usbDetails: deviceDetails,
+      usbAvailable: !!this.usbLib,
+      sdkRequired: false, // SDK is on server, not here
+      serverUrl: this.serverUrl,
       platform: os.platform()
     };
   }
 
   /**
-   * Connect to scanner
+   * Connect to scanner via USB
    */
   async connect() {
-    console.log('[FINGERPRINT] Connecting...');
+    console.log('[FINGERPRINT] Connecting to scanner...');
 
     if (this.isConnected) {
       return {
@@ -148,59 +105,72 @@ class FingerprintScannerWindows {
       };
     }
 
-    // If no SDK available or not on Windows, use simulation
-    if (!this.sgfplib || !isWindows) {
-      this.isConnected = true;
-      this.deviceInfo = {
-        vendorId: '0x1162',
-        productId: '0x2200',
-        productName: 'SecuGen Hamster Pro 20 (Simulated)',
-        manufacturer: 'SecuGen',
-        simulated: true
-      };
-
-      return {
-        success: true,
-        simulated: true,
-        deviceInfo: this.deviceInfo
-      };
+    if (!this.usbLib) {
+      throw new Error('USB library not available. Please ensure usb package is installed.');
     }
 
     try {
-      const ref = require('ref-napi');
+      // Find SecuGen device
+      this.device = this.usbLib.findByIds(SECUGEN_VENDOR_ID, SECUGEN_PRODUCT_ID);
 
-      // Create device handle
-      const hDevicePtr = ref.alloc(ref.types.uint64);
-      let result = this.sgfplib.CYCACHE_Create(hDevicePtr);
-
-      if (result !== CYCACHE_CONSTANTS.CYCACHE_ERROR_NONE) {
-        throw new Error(`Failed to create device handle: ${result}`);
+      if (!this.device) {
+        throw new Error('SecuGen scanner not detected. Please connect the device.');
       }
 
-      this.hDevice = hDevicePtr.deref();
+      // Open the device
+      this.device.open();
+      console.log('[FINGERPRINT] Device opened');
 
-      // Initialize for Hamster Pro 20
-      result = this.sgfplib.CYCACHE_Init(this.hDevice, CYCACHE_CONSTANTS.SG_DEV_AUTO);
-      if (result !== CYCACHE_CONSTANTS.CYCACHE_ERROR_NONE) {
-        throw new Error(`Failed to initialize: ${result}`);
+      // Get device info
+      const descriptor = this.device.deviceDescriptor;
+
+      // Try to get string descriptors
+      let manufacturer = 'SecuGen';
+      let productName = 'Hamster Pro';
+
+      try {
+        if (descriptor.iManufacturer) {
+          manufacturer = await this.getStringDescriptor(descriptor.iManufacturer);
+        }
+        if (descriptor.iProduct) {
+          productName = await this.getStringDescriptor(descriptor.iProduct);
+        }
+      } catch (e) {
+        // Use defaults if string descriptors fail
       }
 
-      // Open device
-      result = this.sgfplib.CYCACHE_OpenDevice(this.hDevice, 0);
-      if (result !== CYCACHE_CONSTANTS.CYCACHE_ERROR_NONE) {
-        throw new Error(`Failed to open device: ${result}`);
+      // Claim the interface
+      const iface = this.device.interface(0);
+
+      // On Windows, we might need to detach kernel driver
+      if (os.platform() === 'win32') {
+        try {
+          if (iface.isKernelDriverActive && iface.isKernelDriverActive()) {
+            iface.detachKernelDriver();
+          }
+        } catch (e) {
+          // Not critical
+        }
       }
 
-      // Turn on LED
-      this.sgfplib.CYCACHE_SetLedOn(this.hDevice, true);
+      try {
+        iface.claim();
+        console.log('[FINGERPRINT] Interface claimed');
+      } catch (e) {
+        console.log('[FINGERPRINT] Could not claim interface:', e.message);
+        // Continue anyway - we might still be able to do control transfers
+      }
+
+      // Initialize the scanner (turn on LED)
+      await this.initializeScanner();
 
       this.isConnected = true;
       this.deviceInfo = {
-        vendorId: '0x1162',
-        productId: '0x2200',
-        productName: 'SecuGen Hamster Pro 20',
-        manufacturer: 'SecuGen',
-        simulated: false
+        vendorId: `0x${SECUGEN_VENDOR_ID.toString(16)}`,
+        productId: `0x${SECUGEN_PRODUCT_ID.toString(16)}`,
+        productName: productName,
+        manufacturer: manufacturer,
+        serial: descriptor.iSerialNumber ? await this.getStringDescriptor(descriptor.iSerialNumber).catch(() => 'N/A') : 'N/A'
       };
 
       return {
@@ -211,48 +181,125 @@ class FingerprintScannerWindows {
     } catch (error) {
       console.error('[FINGERPRINT] Connection error:', error);
 
-      // Fallback to simulation
-      this.isConnected = true;
-      this.deviceInfo = {
-        vendorId: '0x1162',
-        productId: '0x2200',
-        productName: 'SecuGen Hamster Pro 20 (Simulated)',
-        manufacturer: 'SecuGen',
-        simulated: true
-      };
+      // Close device if opened
+      if (this.device) {
+        try { this.device.close(); } catch (e) {}
+        this.device = null;
+      }
 
-      return {
-        success: true,
-        simulated: true,
-        deviceInfo: this.deviceInfo,
-        warning: error.message
-      };
+      throw error;
     }
+  }
+
+  /**
+   * Get USB string descriptor
+   */
+  getStringDescriptor(index) {
+    return new Promise((resolve, reject) => {
+      if (!this.device) {
+        reject(new Error('Device not open'));
+        return;
+      }
+      this.device.getStringDescriptor(index, (err, data) => {
+        if (err) reject(err);
+        else resolve(data);
+      });
+    });
+  }
+
+  /**
+   * Initialize scanner - turn on LED, set brightness
+   */
+  async initializeScanner() {
+    if (!this.device) return;
+
+    // SecuGen initialization commands via USB control transfers
+    // These are vendor-specific commands
+
+    const commands = [
+      // LED ON command
+      { bmRequestType: 0x40, bRequest: 0x50, wValue: 0x01, wIndex: 0x00 },
+      // Set brightness
+      { bmRequestType: 0x40, bRequest: 0x51, wValue: 0x50, wIndex: 0x00 },
+    ];
+
+    for (const cmd of commands) {
+      try {
+        await this.controlTransfer(cmd.bmRequestType, cmd.bRequest, cmd.wValue, cmd.wIndex, Buffer.alloc(0));
+      } catch (e) {
+        // Continue even if commands fail
+        console.log('[FINGERPRINT] Init command failed:', e.message);
+      }
+    }
+  }
+
+  /**
+   * USB control transfer wrapper
+   */
+  controlTransfer(bmRequestType, bRequest, wValue, wIndex, data) {
+    return new Promise((resolve, reject) => {
+      if (!this.device) {
+        reject(new Error('Device not open'));
+        return;
+      }
+
+      if (data.length === 0) {
+        // OUT transfer with no data
+        this.device.controlTransfer(bmRequestType, bRequest, wValue, wIndex, Buffer.alloc(0), (err) => {
+          if (err) reject(err);
+          else resolve();
+        });
+      } else if (bmRequestType & 0x80) {
+        // IN transfer - expect data back
+        this.device.controlTransfer(bmRequestType, bRequest, wValue, wIndex, data.length, (err, recvData) => {
+          if (err) reject(err);
+          else resolve(recvData);
+        });
+      } else {
+        // OUT transfer with data
+        this.device.controlTransfer(bmRequestType, bRequest, wValue, wIndex, data, (err) => {
+          if (err) reject(err);
+          else resolve();
+        });
+      }
+    });
   }
 
   /**
    * Disconnect scanner
    */
   async disconnect() {
-    if (this.sgfplib && this.hDevice && isWindows) {
+    console.log('[FINGERPRINT] Disconnecting...');
+
+    if (this.device) {
       try {
-        this.sgfplib.CYCACHE_SetLedOn(this.hDevice, false);
-        this.sgfplib.CYCACHE_CloseDevice(this.hDevice);
-        this.sgfplib.CYCACHE_Close(this.hDevice);
+        // Turn off LED
+        await this.controlTransfer(0x40, 0x50, 0x00, 0x00, Buffer.alloc(0)).catch(() => {});
+
+        // Release interface
+        try {
+          const iface = this.device.interface(0);
+          iface.release(true, () => {});
+        } catch (e) {}
+
+        // Close device
+        this.device.close();
       } catch (e) {
         console.log('[FINGERPRINT] Disconnect error:', e.message);
       }
+
+      this.device = null;
     }
 
     this.isConnected = false;
     this.deviceInfo = null;
-    this.hDevice = null;
 
     return { success: true };
   }
 
   /**
-   * Capture fingerprint
+   * Capture fingerprint image via USB
+   * Returns raw image data to be processed by server
    */
   async capture(options = {}) {
     const timeout = options.timeout || 10000;
@@ -271,171 +318,201 @@ class FingerprintScannerWindows {
     this.isCapturing = true;
 
     try {
-      let imageData;
-      let quality;
-      let template;
+      // Turn on LED for capture
+      await this.setLed(true);
 
-      // Check if we have real SDK and device
-      if (this.sgfplib && this.hDevice && isWindows && !this.deviceInfo?.simulated) {
-        // Real capture using SecuGen SDK
-        const result = await this.captureReal(timeout);
-        imageData = result.imageData;
-        quality = result.quality;
-        template = result.template;
-      } else {
-        // Simulation mode
-        await new Promise(resolve => setTimeout(resolve, 1500)); // Simulate scan time
-        imageData = this.generateFingerprint();
-        quality = this.calculateQuality(imageData);
-        template = this.generateTemplate(imageData);
-      }
+      // Wait a moment for LED
+      await this.delay(100);
+
+      // Capture raw image from scanner
+      const rawImage = await this.captureRawImage(timeout);
+
+      // Turn off LED
+      await this.setLed(false);
+
+      // Calculate local quality estimate
+      const quality = this.estimateQuality(rawImage);
 
       if (quality < minQuality) {
-        throw new Error(`Image quality too low (${quality}%). Please try again.`);
+        throw new Error(`Image quality too low (${quality}%). Please place finger properly and try again.`);
       }
 
+      // Return raw image - server will generate template
       return {
         success: true,
-        template: template.toString('base64'),
-        image: imageData.toString('base64'),
+        image: rawImage.toString('base64'),
+        width: IMAGE_WIDTH,
+        height: IMAGE_HEIGHT,
         quality: quality,
-        width: this.imageWidth,
-        height: this.imageHeight,
         timestamp: Date.now(),
-        simulated: this.deviceInfo?.simulated || false
+        requiresServerProcessing: true, // Tell frontend this needs server processing
+        message: 'Raw image captured. Send to server for template generation.'
       };
 
     } finally {
       this.isCapturing = false;
+      await this.setLed(false).catch(() => {});
     }
   }
 
   /**
-   * Real capture using SecuGen SDK
+   * Capture raw image from scanner via USB bulk transfer
    */
-  async captureReal(timeout) {
+  async captureRawImage(timeout) {
     return new Promise((resolve, reject) => {
-      try {
-        const ref = require('ref-napi');
-
-        // Turn on LED
-        this.sgfplib.CYCACHE_SetLedOn(this.hDevice, true);
-
-        // Allocate image buffer
-        const imageSize = this.imageWidth * this.imageHeight;
-        const imageBuffer = Buffer.alloc(imageSize);
-
-        // Capture with timeout
-        const startTime = Date.now();
-
-        const tryCapture = () => {
-          if (Date.now() - startTime > timeout) {
-            this.sgfplib.CYCACHE_SetLedOn(this.hDevice, false);
-            reject(new Error('Capture timeout'));
-            return;
-          }
-
-          const result = this.sgfplib.CYCACHE_GetImage(this.hDevice, imageBuffer);
-
-          if (result === CYCACHE_CONSTANTS.CYCACHE_ERROR_NONE) {
-            // Got image, check quality
-            const qualityPtr = ref.alloc(ref.types.uint32);
-            this.sgfplib.CYCACHE_GetImageQuality(
-              this.hDevice,
-              this.imageWidth,
-              this.imageHeight,
-              imageBuffer,
-              qualityPtr
-            );
-
-            const quality = qualityPtr.deref();
-
-            // Create template
-            const templateBuffer = Buffer.alloc(400); // Max template size
-            this.sgfplib.CYCACHE_CreateTemplate(
-              this.hDevice,
-              null, // Use default fingerprint info
-              imageBuffer,
-              templateBuffer
-            );
-
-            this.sgfplib.CYCACHE_SetLedOn(this.hDevice, false);
-
-            resolve({
-              imageData: imageBuffer,
-              quality: quality,
-              template: templateBuffer
-            });
-          } else {
-            // Retry after short delay
-            setTimeout(tryCapture, 100);
-          }
-        };
-
-        tryCapture();
-
-      } catch (error) {
-        this.sgfplib.CYCACHE_SetLedOn(this.hDevice, false);
-        reject(error);
+      if (!this.device) {
+        reject(new Error('Device not connected'));
+        return;
       }
+
+      const startTime = Date.now();
+      const imageBuffer = Buffer.alloc(IMAGE_SIZE);
+      let bytesRead = 0;
+
+      // Get the IN endpoint (usually 0x82 or 0x81)
+      let inEndpoint = null;
+      try {
+        const iface = this.device.interface(0);
+        for (const ep of iface.endpoints) {
+          if (ep.direction === 'in') {
+            inEndpoint = ep;
+            break;
+          }
+        }
+      } catch (e) {
+        // Use default endpoint
+      }
+
+      if (!inEndpoint) {
+        // Try control transfer method instead
+        this.captureViaControlTransfer(timeout)
+          .then(resolve)
+          .catch(reject);
+        return;
+      }
+
+      const tryRead = () => {
+        if (Date.now() - startTime > timeout) {
+          reject(new Error('Capture timeout - no finger detected'));
+          return;
+        }
+
+        // First, send capture command
+        this.device.controlTransfer(
+          0x40,  // bmRequestType: vendor, host-to-device
+          0x52,  // bRequest: capture command
+          0x01,  // wValue: start capture
+          0x00,  // wIndex
+          Buffer.alloc(0),
+          (err) => {
+            if (err) {
+              // Retry after delay
+              setTimeout(tryRead, 200);
+              return;
+            }
+
+            // Wait for capture to complete
+            setTimeout(() => {
+              // Read image data
+              inEndpoint.transfer(IMAGE_SIZE, (err, data) => {
+                if (err) {
+                  // Retry
+                  setTimeout(tryRead, 200);
+                  return;
+                }
+
+                if (data && data.length > 0) {
+                  // Check if this is a valid fingerprint image (not all black/white)
+                  const isValid = this.isValidImage(data);
+                  if (isValid) {
+                    resolve(data);
+                  } else {
+                    // No finger detected, retry
+                    setTimeout(tryRead, 200);
+                  }
+                } else {
+                  setTimeout(tryRead, 200);
+                }
+              });
+            }, 100);
+          }
+        );
+      };
+
+      tryRead();
     });
   }
 
   /**
-   * Generate synthetic fingerprint (fallback)
+   * Alternative capture method using control transfers only
    */
-  generateFingerprint() {
-    const width = this.imageWidth;
-    const height = this.imageHeight;
-    const image = Buffer.alloc(width * height);
+  async captureViaControlTransfer(timeout) {
+    const startTime = Date.now();
+    const chunkSize = 64;
+    const imageBuffer = Buffer.alloc(IMAGE_SIZE);
 
-    const cx = width / 2;
-    const cy = height / 2;
-    const seed = Date.now() % 10000;
-    const patternType = seed % 3;
+    while (Date.now() - startTime < timeout) {
+      try {
+        // Send capture command
+        await this.controlTransfer(0x40, 0x52, 0x01, 0x00, Buffer.alloc(0));
 
-    for (let y = 0; y < height; y++) {
-      for (let x = 0; x < width; x++) {
-        const idx = y * width + x;
-        const dx = x - cx;
-        const dy = y - cy;
-        const dist = Math.sqrt(dx * dx + dy * dy);
-        const angle = Math.atan2(dy, dx);
+        // Wait for capture
+        await this.delay(200);
 
-        // Elliptical boundary
-        const ellipse = (dx * dx) / (115 * 115) + (dy * dy) / (135 * 135);
-
-        if (ellipse > 1) {
-          image[idx] = 235 + Math.floor(Math.random() * 20);
-        } else {
-          let pattern;
-          const freq = 0.12 + (seed % 30) * 0.002;
-
-          if (patternType === 0) {
-            // Loop pattern
-            pattern = Math.sin(dy * freq + Math.sin(dx * 0.05) * 2);
-          } else if (patternType === 1) {
-            // Whorl pattern
-            pattern = Math.sin(dist * freq + angle * 2);
+        // Read image in chunks
+        let offset = 0;
+        while (offset < IMAGE_SIZE) {
+          const chunk = await this.controlTransfer(0xC0, 0x53, offset, 0x00, Buffer.alloc(chunkSize));
+          if (chunk && chunk.length > 0) {
+            chunk.copy(imageBuffer, offset);
+            offset += chunk.length;
           } else {
-            // Arch pattern
-            pattern = Math.sin((dy + Math.abs(dx) * 0.3) * freq);
+            break;
           }
-
-          const noise = (Math.random() - 0.5) * 15;
-          const baseValue = pattern > 0 ? 50 : 190;
-          image[idx] = Math.max(0, Math.min(255, baseValue + noise));
         }
+
+        if (offset >= IMAGE_SIZE && this.isValidImage(imageBuffer)) {
+          return imageBuffer;
+        }
+
+        await this.delay(200);
+      } catch (e) {
+        await this.delay(200);
       }
     }
 
-    return image;
+    throw new Error('Capture timeout - no finger detected');
   }
 
   /**
-   * Calculate image quality
+   * Check if image contains valid fingerprint data
    */
-  calculateQuality(imageData) {
+  isValidImage(imageData) {
+    if (!imageData || imageData.length < 1000) return false;
+
+    // Check for variance (not all same value)
+    let min = 255, max = 0, sum = 0;
+    const sampleSize = Math.min(1000, imageData.length);
+
+    for (let i = 0; i < sampleSize; i++) {
+      const idx = Math.floor(i * imageData.length / sampleSize);
+      const pixel = imageData[idx];
+      if (pixel < min) min = pixel;
+      if (pixel > max) max = pixel;
+      sum += pixel;
+    }
+
+    const contrast = max - min;
+    const mean = sum / sampleSize;
+
+    // Valid fingerprint should have reasonable contrast and not be all black/white
+    return contrast > 30 && mean > 30 && mean < 225;
+  }
+
+  /**
+   * Estimate image quality locally (basic estimate)
+   */
+  estimateQuality(imageData) {
     let min = 255, max = 0, sum = 0;
 
     for (let i = 0; i < imageData.length; i++) {
@@ -448,6 +525,7 @@ class FingerprintScannerWindows {
     const contrast = max - min;
     const mean = sum / imageData.length;
 
+    // Calculate variance for sharpness
     let variance = 0;
     for (let i = 0; i < imageData.length; i++) {
       const diff = imageData[i] - mean;
@@ -456,156 +534,76 @@ class FingerprintScannerWindows {
     variance /= imageData.length;
     const stdDev = Math.sqrt(variance);
 
+    // Quality score based on contrast and variance
     const contrastScore = Math.min(contrast / 2, 40);
     const sharpnessScore = Math.min(stdDev / 2, 30);
-    const edgeScore = 30;
+    const baseScore = 30; // Base quality for detecting a finger
 
-    return Math.min(100, Math.max(0, Math.round(contrastScore + sharpnessScore + edgeScore)));
+    return Math.min(100, Math.max(0, Math.round(contrastScore + sharpnessScore + baseScore)));
   }
 
   /**
-   * Generate fingerprint template
+   * Control LED
    */
-  generateTemplate(imageData) {
-    const width = this.imageWidth;
-    const height = this.imageHeight;
-    const dpi = CYCACHE_CONSTANTS.IMAGE_DPI;
-    const minutiae = this.extractMinutiae(imageData, width, height);
+  async setLed(on) {
+    if (!this.device) return;
 
-    // FMR template format header
-    const header = Buffer.from([
-      0x46, 0x4D, 0x52, 0x00, // "FMR\0"
-      0x20, 0x32, 0x30,       // " 20"
-      minutiae.length,
-      (width >> 8) & 0xFF, width & 0xFF,
-      (height >> 8) & 0xFF, height & 0xFF,
-      dpi >> 8, dpi & 0xFF
-    ]);
-
-    const minutiaeData = Buffer.alloc(minutiae.length * 6);
-    minutiae.forEach((m, i) => {
-      const offset = i * 6;
-      minutiaeData.writeUInt16BE(m.x, offset);
-      minutiaeData.writeUInt16BE(m.y, offset + 2);
-      minutiaeData[offset + 4] = m.angle;
-      minutiaeData[offset + 5] = m.type;
-    });
-
-    const templateData = Buffer.concat([header, minutiaeData]);
-    const hash = crypto.createHash('sha256').update(templateData).digest().slice(0, 16);
-
-    return Buffer.concat([templateData, hash]);
-  }
-
-  /**
-   * Extract minutiae points
-   */
-  extractMinutiae(imageData, width, height) {
-    const minutiae = [];
-    const threshold = 128;
-    const blockSize = 16;
-
-    for (let by = 1; by < Math.floor(height / blockSize) - 1; by++) {
-      for (let bx = 1; bx < Math.floor(width / blockSize) - 1; bx++) {
-        const x = bx * blockSize + blockSize / 2;
-        const y = by * blockSize + blockSize / 2;
-        const idx = Math.floor(y) * width + Math.floor(x);
-
-        if (idx >= 0 && idx < imageData.length) {
-          const pixel = imageData[idx];
-
-          if (pixel < threshold) {
-            const neighbors = this.countNeighbors(imageData, x, y, width, height, threshold);
-
-            if (neighbors === 1 || neighbors === 3) {
-              minutiae.push({
-                x: Math.round(x),
-                y: Math.round(y),
-                angle: Math.floor(Math.random() * 256),
-                type: neighbors === 1 ? 0x01 : 0x02 // Ridge ending or bifurcation
-              });
-            }
-          }
-        }
-      }
+    try {
+      await this.controlTransfer(0x40, 0x50, on ? 0x01 : 0x00, 0x00, Buffer.alloc(0));
+    } catch (e) {
+      // LED control might not be available on all firmware versions
     }
-
-    return minutiae.slice(0, 128);
   }
 
   /**
-   * Count neighbors for minutiae detection
+   * Delay helper
    */
-  countNeighbors(imageData, x, y, width, height, threshold) {
-    let count = 0;
-    const offsets = [[-1, -1], [0, -1], [1, -1], [-1, 0], [1, 0], [-1, 1], [0, 1], [1, 1]];
-
-    for (const [dx, dy] of offsets) {
-      const nx = Math.floor(x + dx);
-      const ny = Math.floor(y + dy);
-
-      if (nx >= 0 && nx < width && ny >= 0 && ny < height) {
-        if (imageData[ny * width + nx] < threshold) {
-          count++;
-        }
-      }
-    }
-
-    return count;
+  delay(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
   }
 
   /**
-   * Match two templates
+   * Match templates - delegates to server
+   * This function sends templates to server which has the SDK
    */
   async match(template1, template2) {
+    // Matching must be done on server which has the SDK
+    // This is just a stub that informs the caller
+    return {
+      match: false,
+      score: 0,
+      error: 'Template matching must be done on server. Use /api/scanner/match endpoint.',
+      requiresServer: true
+    };
+  }
+
+  /**
+   * Send raw image to server for processing
+   * Server will generate template using SecuGen SDK
+   */
+  async sendToServer(imageData, serverUrl) {
+    const url = serverUrl || this.serverUrl;
+
     try {
-      const t1 = Buffer.isBuffer(template1) ? template1 : Buffer.from(template1, 'base64');
-      const t2 = Buffer.isBuffer(template2) ? template2 : Buffer.from(template2, 'base64');
+      const response = await fetch(`${url}/api/scanner/process`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          image: imageData.toString('base64'),
+          width: IMAGE_WIDTH,
+          height: IMAGE_HEIGHT
+        })
+      });
 
-      if (t1.length < 20 || t2.length < 20) {
-        return { match: false, score: 0, error: 'Invalid template' };
+      if (!response.ok) {
+        throw new Error(`Server error: ${response.status}`);
       }
 
-      // If we have real SDK, use it
-      if (this.sgfplib && this.hDevice && isWindows && !this.deviceInfo?.simulated) {
-        const ref = require('ref-napi');
-        const scorePtr = ref.alloc(ref.types.uint32);
-
-        const result = this.sgfplib.CYCACHE_MatchTemplate(
-          this.hDevice,
-          t1,
-          t2,
-          3, // Security level (1-5)
-          scorePtr
-        );
-
-        if (result === CYCACHE_CONSTANTS.CYCACHE_ERROR_NONE) {
-          const score = scorePtr.deref();
-          return {
-            match: score >= 60,
-            score: score
-          };
-        }
-      }
-
-      // Fallback: simple hash comparison
-      const hash1 = crypto.createHash('md5').update(t1).digest('hex');
-      const hash2 = crypto.createHash('md5').update(t2).digest('hex');
-
-      let matchingChars = 0;
-      for (let i = 0; i < hash1.length; i++) {
-        if (hash1[i] === hash2[i]) matchingChars++;
-      }
-
-      const score = Math.round((matchingChars / hash1.length) * 100);
-
-      return {
-        match: score >= 60,
-        score: score
-      };
-
+      return await response.json();
     } catch (error) {
-      return { match: false, score: 0, error: error.message };
+      throw new Error(`Failed to send to server: ${error.message}`);
     }
   }
 }

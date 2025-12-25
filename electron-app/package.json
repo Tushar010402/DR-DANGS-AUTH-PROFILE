@@ -1,8 +1,8 @@
 {
   "name": "drdangs-fingerprint-service",
   "productName": "Dr Dangs Fingerprint Service",
-  "version": "1.0.0",
-  "description": "Fingerprint Scanner Service for Dr. Dangs Authentication Portal",
+  "version": "2.0.0",
+  "description": "SDK-Free Fingerprint Scanner Client for Dr. Dangs Authentication Portal",
   "main": "main.js",
   "author": {
     "name": "Dr. Dangs Lab",
@@ -86,7 +86,6 @@
       "fingerprint-windows.js",
       "index.html",
       "assets/**/*",
-      "sdk/**/*",
       "!node_modules/**/*.md",
       "!node_modules/**/*.txt"
     ],
