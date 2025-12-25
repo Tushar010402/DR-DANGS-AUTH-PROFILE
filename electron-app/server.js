@@ -5,26 +5,15 @@
 
 const express = require('express');
 const cors = require('cors');
+const scanner = require('./fingerprint');
 
 let server = null;
 const PORT = 5050;
 
-// Scanner state
-let scannerState = {
-  connected: true,
-  deviceInfo: {
-    vendorId: '1162',
-    productId: '0320',
-    manufacturer: 'SecuGen',
-    product: 'Hamster Plus'
-  },
-  capturing: false
-};
-
 function createApp() {
   const app = express();
 
-  // CORS - Allow all origins for localhost service
+  // CORS - Allow browser access
   app.use(cors({
     origin: '*',
     methods: ['GET', 'POST', 'OPTIONS'],
@@ -46,48 +35,74 @@ function createApp() {
 
   // Scanner status
   app.get('/scanner/status', (req, res) => {
-    res.json({
-      connected: scannerState.connected,
-      capturing: scannerState.capturing,
-      deviceInfo: scannerState.deviceInfo
-    });
+    const status = scanner.getStatus();
+    res.json(status);
   });
 
   // Connect scanner
-  app.post('/scanner/connect', (req, res) => {
-    scannerState.connected = true;
-    res.json({
-      success: true,
-      message: 'Scanner connected',
-      deviceInfo: scannerState.deviceInfo
-    });
+  app.post('/scanner/connect', async (req, res) => {
+    try {
+      const result = await scanner.connect();
+      res.json(result);
+    } catch (err) {
+      res.status(500).json({
+        success: false,
+        error: err.message
+      });
+    }
+  });
+
+  // Disconnect scanner
+  app.post('/scanner/disconnect', async (req, res) => {
+    try {
+      const result = await scanner.disconnect();
+      res.json(result);
+    } catch (err) {
+      res.status(500).json({
+        success: false,
+        error: err.message
+      });
+    }
   });
 
   // Capture fingerprint
   app.post('/scanner/capture', async (req, res) => {
     try {
-      scannerState.capturing = true;
+      const options = {
+        timeout: req.body.timeout || 10000,
+        minQuality: req.body.minQuality || 40
+      };
 
-      // Simulate capture (replace with real SecuGen SDK later)
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      const result = await scanner.capture(options);
+      res.json(result);
 
-      scannerState.capturing = false;
+    } catch (err) {
+      res.status(400).json({
+        success: false,
+        error: err.message
+      });
+    }
+  });
 
-      const quality = 75 + Math.floor(Math.random() * 20);
-      const template = generateTemplate();
-      const image = generateFingerprintImage();
+  // Match templates
+  app.post('/scanner/match', (req, res) => {
+    try {
+      const { template1, template2 } = req.body;
 
+      if (!template1 || !template2) {
+        return res.status(400).json({
+          success: false,
+          error: 'Both template1 and template2 are required'
+        });
+      }
+
+      const result = scanner.match(template1, template2);
       res.json({
         success: true,
-        template: template,
-        image: image,
-        quality: quality,
-        width: 260,
-        height: 300,
-        timestamp: new Date().toISOString()
+        ...result
       });
+
     } catch (err) {
-      scannerState.capturing = false;
       res.status(400).json({
         success: false,
         error: err.message
@@ -98,47 +113,27 @@ function createApp() {
   return app;
 }
 
-function generateTemplate() {
-  const template = Buffer.alloc(512);
-  for (let i = 0; i < 512; i++) {
-    template[i] = Math.floor(Math.random() * 256);
-  }
-  return template.toString('base64');
-}
-
-function generateFingerprintImage() {
-  const width = 260;
-  const height = 300;
-  const buffer = Buffer.alloc(width * height);
-
-  for (let y = 0; y < height; y++) {
-    for (let x = 0; x < width; x++) {
-      const cx = width / 2, cy = height / 2;
-      const dx = x - cx, dy = y - cy;
-      const dist = Math.sqrt(dx * dx + dy * dy);
-      const angle = Math.atan2(dy, dx);
-      const ridge = Math.sin(dist * 0.3 + angle * 3) * 0.5 + 0.5;
-      const noise = Math.random() * 0.2;
-      buffer[y * width + x] = Math.floor((ridge + noise) * 128 + 64);
-    }
-  }
-
-  return buffer.toString('base64');
-}
-
 function startServer() {
   return new Promise((resolve, reject) => {
     const app = createApp();
 
     server = app.listen(PORT, '127.0.0.1', () => {
       console.log(`Fingerprint service running on http://localhost:${PORT}`);
+
+      // Auto-connect scanner on startup
+      scanner.connect().then(result => {
+        if (result.success) {
+          console.log('Scanner connected:', result.deviceInfo?.productName || 'Simulated');
+        }
+      }).catch(() => {});
+
       resolve();
     });
 
     server.on('error', (err) => {
       if (err.code === 'EADDRINUSE') {
         console.log(`Port ${PORT} already in use - service may already be running`);
-        resolve(); // Don't fail, assume another instance is running
+        resolve();
       } else {
         reject(err);
       }
@@ -148,6 +143,8 @@ function startServer() {
 
 function stopServer() {
   return new Promise((resolve) => {
+    scanner.disconnect().catch(() => {});
+
     if (server) {
       server.close(() => {
         console.log('Fingerprint service stopped');

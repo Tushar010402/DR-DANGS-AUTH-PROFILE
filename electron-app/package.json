@@ -13,13 +13,17 @@
     "start": "electron .",
     "build": "electron-builder",
     "build:mac": "electron-builder --mac",
+    "build:mac:unsigned": "electron-builder --mac --config.mac.identity=null",
     "build:win": "electron-builder --win",
-    "build:all": "electron-builder --mac --win"
+    "build:all": "electron-builder --mac --win",
+    "postinstall": "electron-builder install-app-deps",
+    "rebuild": "electron-rebuild"
   },
   "build": {
     "appId": "com.drdangs.fingerprint-service",
     "productName": "Dr Dangs Fingerprint Service",
     "copyright": "Copyright © 2025 Dr. Dangs Lab",
+    "asar": true,
     "mac": {
       "category": "public.app-category.utilities",
       "icon": "assets/icon.icns",
@@ -27,15 +31,36 @@
       "gatekeeperAssess": false,
       "entitlements": "entitlements.mac.plist",
       "entitlementsInherit": "entitlements.mac.plist",
+      "identity": "Apple Development: Tushar Agrawal (82236W3MQY)",
       "target": [
         {
           "target": "dmg",
-          "arch": ["x64", "arm64"]
+          "arch": ["universal"]
+        },
+        {
+          "target": "zip",
+          "arch": ["universal"]
         }
       ],
       "notarize": {
-        "teamId": "YOUR_TEAM_ID"
+        "teamId": "CS33T79968"
+      },
+      "extendInfo": {
+        "NSHumanReadableCopyright": "Copyright © 2025 Dr. Dangs Lab",
+        "CFBundleDisplayName": "Dr Dangs Fingerprint Service",
+        "LSUIElement": false
       }
+    },
+    "dmg": {
+      "backgroundColor": "#ffffff",
+      "window": {
+        "width": 540,
+        "height": 380
+      },
+      "contents": [
+        { "x": 130, "y": 220 },
+        { "x": 410, "y": 220, "type": "link", "path": "/Applications" }
+      ]
     },
     "win": {
       "icon": "assets/icon.ico",
@@ -44,32 +69,43 @@
           "target": "nsis",
           "arch": ["x64"]
         }
-      ]
+      ],
+      "publisherName": "Dr. Dangs Lab"
     },
     "nsis": {
-      "oneClick": true,
-      "allowToChangeInstallationDirectory": false,
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "runAfterFinish": true
+      "runAfterFinish": true,
+      "installerIcon": "assets/icon.ico",
+      "uninstallerIcon": "assets/icon.ico",
+      "installerHeaderIcon": "assets/icon.ico"
     },
     "files": [
       "main.js",
       "preload.js",
       "server.js",
+      "fingerprint.js",
       "index.html",
-      "assets/**/*"
+      "assets/**/*",
+      "!node_modules/**/*.md",
+      "!node_modules/**/*.txt"
     ],
     "directories": {
-      "output": "dist"
-    }
+      "output": "dist",
+      "buildResources": "assets"
+    },
+    "publish": null
   },
   "dependencies": {
     "cors": "^2.8.5",
-    "express": "^4.18.2"
+    "express": "^4.18.2",
+    "usb": "^2.11.0"
   },
   "devDependencies": {
     "electron": "^28.0.0",
-    "electron-builder": "^24.9.1"
+    "electron-builder": "^24.9.1",
+    "electron-rebuild": "^3.2.9"
   }
 }
