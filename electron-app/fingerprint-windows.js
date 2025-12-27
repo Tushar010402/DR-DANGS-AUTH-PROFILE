@@ -36,13 +36,28 @@ class FingerprintScannerWindows {
    * Load USB library for direct device communication
    */
   loadUSBLibrary() {
-    try {
-      this.usbLib = require('usb');
-      console.log('[FINGERPRINT] USB library loaded successfully');
-    } catch (e) {
-      console.log('[FINGERPRINT] USB library not available:', e.message);
-      this.usbLib = null;
+    const path = require('path');
+
+    // Try multiple ways to load the USB module
+    const attempts = [
+      () => require('usb'),
+      () => require(path.join(process.resourcesPath, 'app.asar.unpacked', 'node_modules', 'usb')),
+      () => require(path.join(process.resourcesPath, 'app', 'node_modules', 'usb')),
+      () => require(path.join(__dirname, 'node_modules', 'usb')),
+    ];
+
+    for (const attempt of attempts) {
+      try {
+        this.usbLib = attempt();
+        console.log('[FINGERPRINT] USB library loaded successfully');
+        return;
+      } catch (e) {
+        console.log('[FINGERPRINT] USB load attempt failed:', e.message);
+      }
     }
+
+    console.log('[FINGERPRINT] USB library not available after all attempts');
+    this.usbLib = null;
   }
 
   /**

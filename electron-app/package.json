@@ -24,6 +24,10 @@
     "productName": "Dr Dangs Fingerprint Service",
     "copyright": "Copyright © 2025 Dr. Dangs Lab",
     "asar": true,
+    "asarUnpack": [
+      "node_modules/usb/**/*",
+      "node_modules/@prantlf/**/*"
+    ],
     "mac": {
       "category": "public.app-category.utilities",
       "icon": "assets/icon.icns",
@@ -44,7 +48,10 @@
       "extendInfo": {
         "NSHumanReadableCopyright": "Copyright © 2025 Dr. Dangs Lab",
         "CFBundleDisplayName": "Dr Dangs Fingerprint Service",
-        "LSUIElement": false
+        "LSUIElement": false,
+        "NSUSBUsageDescription": "This app requires USB access to communicate with the SecuGen fingerprint scanner for biometric authentication.",
+        "NSLocalNetworkUsageDescription": "This app uses the local network to provide fingerprint scanning services.",
+        "NSBluetoothAlwaysUsageDescription": "This app may use Bluetooth for device communication."
       }
     },
     "dmg": {
@@ -84,7 +91,9 @@
       "server.js",
       "fingerprint.js",
       "fingerprint-windows.js",
+      "fingerprint-macos.js",
       "index.html",
+      "config.json",
       "assets/**/*",
       "!node_modules/**/*.md",
       "!node_modules/**/*.txt"

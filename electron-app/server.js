@@ -11,17 +11,68 @@
 const express = require('express');
 const cors = require('cors');
 const os = require('os');
+const fs = require('fs');
+const path = require('path');
 
 // Use Windows-specific module on Windows, generic on other platforms
-const scanner = os.platform() === 'win32'
-  ? require('./fingerprint-windows')
-  : require('./fingerprint');
+let scanner;
+if (os.platform() === 'win32') {
+  scanner = require('./fingerprint-windows');
+} else {
+  // Try to load the full USB module, fall back to simple version
+  try {
+    scanner = require('./fingerprint-macos');
+  } catch (e) {
+    scanner = require('./fingerprint');
+  }
+}
 
 let server = null;
 const PORT = 5050;
 
-// Backend server URL (where your SDK is installed)
-let backendServerUrl = 'http://localhost:3001';
+// Configuration file path
+const configPath = path.join(__dirname, 'config.json');
+
+// Default configuration
+const defaultConfig = {
+  backendServerUrl: 'https://auth.drdangscentrallab.com'
+};
+
+/**
+ * Load configuration from file
+ */
+function loadConfig() {
+  try {
+    if (fs.existsSync(configPath)) {
+      const data = fs.readFileSync(configPath, 'utf8');
+      const loaded = JSON.parse(data);
+      console.log('[CONFIG] Loaded from file:', configPath);
+      return { ...defaultConfig, ...loaded };
+    }
+  } catch (e) {
+    console.log('[CONFIG] Failed to load config:', e.message);
+  }
+  console.log('[CONFIG] Using default configuration');
+  return { ...defaultConfig };
+}
+
+/**
+ * Save configuration to file
+ */
+function saveConfig(config) {
+  try {
+    fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
+    console.log('[CONFIG] Saved to file:', configPath);
+    return true;
+  } catch (e) {
+    console.log('[CONFIG] Failed to save config:', e.message);
+    return false;
+  }
+}
+
+// Initialize configuration
+let config = loadConfig();
+let backendServerUrl = config.backendServerUrl;
 
 function createApp() {
   const app = express();
@@ -58,7 +109,7 @@ function createApp() {
     });
   });
 
-  // Configure backend server URL
+  // Configure backend server URL (with persistence)
   app.post('/config/server', (req, res) => {
     const { url } = req.body;
     if (!url) {
@@ -68,15 +119,32 @@ function createApp() {
       });
     }
 
+    // Validate URL format
+    try {
+      new URL(url);
+    } catch (e) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid URL format'
+      });
+    }
+
+    // Update in-memory value
     backendServerUrl = url;
+    config.backendServerUrl = url;
+
     if (scanner.setServerUrl) {
       scanner.setServerUrl(url);
     }
 
+    // Persist to file
+    const saved = saveConfig(config);
+
     res.json({
       success: true,
       backendServerUrl: backendServerUrl,
-      message: 'Backend server URL configured'
+      persisted: saved,
+      message: saved ? 'Settings saved permanently' : 'Settings saved for this session only'
     });
   });
 
